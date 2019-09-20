@@ -1,0 +1,86 @@
+\section{并查集与最小生成树}
+
+\begin{lstlisting}
+int n, m, u[MAXM], v[MAXM], w[MAXM], r[MAXM], p[MAXN];
+bool cmp(const int i, const int j) { return w[i] < w[j]; }
+int Find(int x) { return p[x] == x ? x : p[x] = Find(p[x]); }
+bool Union(int i, int j) { int x = Find(i), y = Find(j); if (x != y) p[x] = y; return x != y; }
+int Kruskal()
+{
+    REP(i,m) r[i] = i;
+    sort(r, r+m, cmp);
+    FOR(i,1,n) p[i] = i;
+    int ans = 0;
+    REP(i,m) {
+        int e = r[i];
+        if (Union(u[e], v[e])) ans += w[e];
+    }
+    return ans;
+}
+
+int main()
+{
+
+    while (~scanf("%d", &n)) {
+        m = 0;
+        FOR(i,1,n)FOR(j,1,n) {
+            scanf("%d", &w[m]);
+            if (j > i) {
+                u[m] = i, v[m] = j;
+                m++;
+            }
+        }
+        printf("%d\n", Kruskal());
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+POJ - 1182
+
+经典题目：食物链
+
+带权并查集，种类并查集
+
+https://blog.csdn.net/niushuai666/article/details/6981689
+
+不仅维护父结点，还维护与父结点的关系relation。相应的Find和Union操作不仅要更新集合域，还要更新关系域。此题巧妙利用0，1，2三个数表示关系，并利用矢量可加性来维护关系域。
+
+POJ数据有问题，输入只有一组。多组输入会WA到去世。要不是去了洛谷OJ上交了一发发现有一组数据有多余输出，要没看到POJ上的讨论，简直WA到怀疑人生。
+
+\begin{lstlisting}
+int n, m, p[MAXN], r[MAXN]; //0 equal, 1 eat, 2 eated
+int Find(int x)
+{
+    if (p[x] == x) return x;
+    int root = Find(p[x]);
+    r[x] = (r[x]+r[p[x]])%3;
+    return p[x] = root;
+}
+bool Union(int op, int i, int j)
+{
+    int x = Find(i), y = Find(j);
+    if (x == y) return r[i] == (op-1+r[j])%3;
+    p[x] = y;
+    r[x] = (-r[i]+op+2+r[j])%3;
+    return true;
+}
+
+int main()
+{
+
+    scanf("%d%d", &n, &m);
+    FOR(i,1,n) p[i] = i;
+    int ans = 0;
+    while (m--) {
+        int op, x, y; scanf("%d%d%d", &op, &x, &y);
+        if (x > n || y > n) ans++;
+        else if (op == 2 && x == y) ans++;
+        else if (!Union(op,x,y)) ans++;
+    }
+    printf("%d\n", ans);
+
+    return 0;
+}
+\end{lstlisting}

@@ -1,0 +1,93 @@
+\section{IO外挂}
+
+适合读到文件末尾、负数
+
+\begin{lstlisting}
+namespace fastIO {
+#define BUF_SIZE 100000
+    bool IOerror = 0;
+    inline char nc() {
+        static char buf[BUF_SIZE], *p1 = buf + BUF_SIZE, *pend = buf + BUF_SIZE;
+        if(p1 == pend) {
+            p1 = buf;
+            pend = buf + fread(buf, 1, BUF_SIZE, stdin);
+            if(pend == p1) {
+                IOerror = 1;
+                return -1;
+            }
+        }
+        return *p1++;
+    }
+    template <class T>
+    inline bool read(T &ret) {
+        char c;
+        if (c=nc(),c==EOF)return 0;
+        while(c!='-'&&(c<'0'||c>'9'))c=nc();
+        int sgn =(c=='-')?-1:1;
+        ret=(c=='-')?0:(c - '0');
+        while(c=nc(),c>='0'&&c<='9') ret=ret*10+(c-'0');
+        ret *= sgn;
+        return 1;
+    }
+    template <class T>
+    inline void print(T x) {
+        if(x>9) print(x/10);
+        putchar(x%10+'0');
+    }
+#undef BUF_SIZE
+};
+\end{lstlisting}
+
+适用于正整数
+
+\begin{lstlisting}
+namespace IN {
+    const int N=2e6+10;
+    char str[N],*S=str,*T=str;
+    inline char rdc()
+    {
+        if (S==T) {
+            T=(S=str)+fread(str,1,N,stdin);
+            if (S==T) return EOF; //exit(0);
+        }
+        return *S++;
+    }
+    inline int rd()
+    {
+        int x=0;
+        char t=rdc();
+        while (t>'9'||t<'0') t=rdc();
+        while ('0'<=t&&t<='9') x=x*10+t-'0', t=rdc();
+        return x;
+    }
+}
+namespace OUT {
+    const int N=2e6+10;
+    char str[N],*T=str;
+    inline void otc(char t)
+    {
+        if (T==str+N) {
+            fwrite(str,1,N,stdout);
+            T=str;
+        }
+        *T++=t;
+    }
+    inline void ot(int x)
+    {
+        if (x<10) otc('0'+x);
+        else {
+            ot(x/10);
+            otc('0'+x%10);
+        }
+    }
+    inline void otall()
+    {
+        fwrite(str,1,T-str,stdout);
+    }
+}
+//example:
+//int n=IN::rd();
+//OUT::ot(n)
+//OUT::otc('\n');
+//OUT::otall();
+\end{lstlisting}

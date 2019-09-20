@@ -1,0 +1,367 @@
+\section{主席树}
+
+P3834 【模板】可持久化线段树 1（主席树）
+
+区间第k大 裸题
+
+\begin{lstlisting}
+#define mid (l+r)/2
+#define lt T[x].ls
+#define rt T[x].rs
+struct node {
+    int sz,ls,rs;
+} T[MAXN*20];
+int root[MAXN],tot;
+void init(){ tot=0; root[0]=0; T[0]={0,0,0}; }
+int cp(int x){ T[++tot]=T[x]; return tot; }
+void update(int& x, int v, int l, int r, int val) {
+    x=cp(v);
+    T[x].sz++;
+    if (l<r) {
+        if (val<=mid) update(lt,lt,l,mid,val);
+        else update(rt,rt,mid+1,r,val);
+    }
+}
+int query(int u, int v, int l, int r, int k) {
+    if (l>=r) return l;
+    int sz=T[T[v].ls].sz-T[T[u].ls].sz;
+    if (k<=sz) return query(T[u].ls,T[v].ls,l,mid,k);
+    else return query(T[u].rs,T[v].rs,mid+1,r,k-sz);
+}
+int n,m,q,a[MAXN],b[MAXN];
+int ID(int x){ return lower_bound(b+1,b+1+m,x)-b; }
+
+int main()
+{
+
+    while (scanf("%d%d", &n,&q)==2) {
+        init();
+        FOR(i,1,n) scanf("%d", &a[i]), b[i]=a[i];
+        sort(b+1,b+1+n);
+        m=unique(b+1,b+1+n)-b-1;
+        FOR(i,1,n) update(root[i],root[i-1],1,m,ID(a[i]));
+        while (q--) {
+            int l,r,k; scanf("%d%d%d", &l,&r,&k);
+            printf("%d\n", b[query(root[l-1],root[r],1,m,k)]);
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+K-th Closest Distance HDU - 6621
+
+区间小于数x的个数 模板
+
+\begin{lstlisting}
+//the number of x s.t. x<k
+int query(int u, int v, int l, int r, int k) {
+    if (k<=l) return 0;
+    if (k>r) return sum[v]-sum[u];
+    return query(L[u],L[v],l,mid,k)+query(R[u],R[v],mid+1,r,k);
+}
+\end{lstlisting}
+
+P3919 【模板】可持久化数组（可持久化线段树/平衡树）
+
+可持久化线段树 单点修改 单点查询
+
+\begin{lstlisting}
+#define mid (l+r)/2
+#define lt T[x].ls
+#define rt T[x].rs
+struct node {
+    int val,ls,rs;
+} T[MAXN<<5];
+int root[MAXN],tot;
+void init(){ tot=0; }
+int newnode(int val){ T[++tot]={val,0,0}; return tot; }
+int cp(int x){ T[++tot]=T[x]; return tot; }
+int build(int l, int r) {
+    int x=newnode(0);
+    if (l==r) scanf("%d", &T[x].val);
+    else {
+        lt=build(l,mid);
+        rt=build(mid+1,r);
+    }
+    return x;
+}
+int update(int v, int l, int r, int p, int val) {
+    int x=cp(v);
+    if (l==r) T[x].val=val;
+    else {
+        if (p<=mid) lt=update(lt,l,mid,p,val);
+        else rt=update(rt,mid+1,r,p,val);
+    }
+    return x;
+}
+int query(int x, int l, int r, int p) {
+    if (l==r) return T[x].val;
+    else {
+        if (p<=mid) return query(lt,l,mid,p);
+        else return query(rt,mid+1,r,p);
+    }
+}
+
+int main()
+{
+
+    int n,q;
+    while (scanf("%d%d", &n,&q)==2) {
+        init();
+        root[0]=build(1,n);
+        FOR(i,1,q) {
+            int v,op,p,val; scanf("%d%d%d", &v,&op,&p);
+            if (op==1) {
+                scanf("%d", &val);
+                root[i]=update(root[v],1,n,p,val);
+            } else {
+                root[i]=root[v];
+                printf("%d\n", query(root[v],1,n,p));
+            }
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+P3567 [POI2014]KUR-Couriers
+
+查询区间中出现超过区间长度一半的数，没有输出0
+
+当且仅当一个结点size超过区间长度一半才有答案，查询左右孩子size，递归下去即可
+
+（如果查询最小，查询最大，查询中间大，貌似会超时，常数大）
+
+\begin{lstlisting}
+int query(int u, int v, int l, int r, int len) {
+    if (l==r) return l;
+    int lsz=T[T[v].ls].sz-T[T[u].ls].sz;
+    int rsz=T[T[v].rs].sz-T[T[u].rs].sz;
+    if (2*lsz>len) return query(T[u].ls,T[v].ls,l,mid,len);
+    if (2*rsz>len) return query(T[u].rs,T[v].rs,mid+1,r,len);
+    return 0;
+}
+\end{lstlisting}
+
+P2633 Count on a tree
+
+树上第k大 模板
+
+从根到某个结点可以看成一个区间，这样可以转化为区间第k大，方法是sum[u]+sum[v]-sum[lca]-sum[lca\_fa]
+
+需要求出lca，用了树链剖分（常数小），而且dfs的时候顺便更新了主席树
+
+\begin{lstlisting}
+int n,m,q,a[MAXN],b[MAXN];
+int to[MAXM],nxt[MAXM],f[MAXN],tot;
+void add(int u, int v) {
+    to[tot]=v;
+    nxt[tot]=f[u];
+    f[u]=tot++;
+}
+#define mid (l+r)/2
+int sum[MAXN<<5],L[MAXN<<5],R[MAXN<<5],root[MAXN],cnt;
+int cp(int x){ sum[++cnt]=sum[x]; L[cnt]=L[x]; R[cnt]=R[x]; return cnt; }
+void update(int& x, int v, int l, int r, int val) {
+    x=cp(v); sum[x]++;
+    if (l<r) {
+        if (val<=mid) update(L[x],L[x],l,mid,val);
+        else update(R[x],R[x],mid+1,r,val);
+    }
+}
+int ID(int x){ return lower_bound(b+1,b+1+m,x)-b; }
+int sz[MAXN],d[MAXN],fa[MAXN],son[MAXN],top[MAXN];
+void dfs(int u) {
+    sz[u]=1; d[u]=d[fa[u]]+1; son[u]=0;
+    update(root[u],root[fa[u]],1,m,ID(a[u]));
+    for (int i=f[u]; ~i; i=nxt[i]) {
+        int v=to[i];
+        if (v==fa[u]) continue;
+        fa[v]=u; dfs(v);
+        sz[u]+=sz[v];
+        if (sz[v]>sz[son[u]]) son[u]=v;
+    }
+}
+void dfs(int u, int tp) {
+    top[u]=tp;
+    if (son[u]) dfs(son[u],tp);
+    for (int i=f[u]; ~i; i=nxt[i]) {
+        int v=to[i];
+        if (v==fa[u]||v==son[u]) continue;
+        dfs(v,v);
+    }
+}
+int LCA(int x, int y) {
+    while (top[x]!=top[y]) d[top[x]]>=d[top[y]]?x=fa[top[x]]:y=fa[top[y]];
+    return d[x]>=d[y]?y:x;
+}
+void init() {
+    tot=0;
+    memset(f,-1,sizeof(f));
+    cnt=fa[1]=sz[0]=0;
+}
+int query(int u, int v, int lca, int lca_fa, int l, int r, int k) {
+    if (l>=r) return l;
+    int sz=sum[L[u]]+sum[L[v]]-sum[L[lca]]-sum[L[lca_fa]];
+    if (k<=sz) return query(L[u],L[v],L[lca],L[lca_fa],l,mid,k);
+    return query(R[u],R[v],R[lca],R[lca_fa],mid+1,r,k-sz);
+}
+
+int main()
+{
+
+    while (scanf("%d%d", &n,&q)==2) {
+        init();
+        FOR(i,1,n) scanf("%d", &a[i]), b[i]=a[i];
+        sort(b+1,b+1+n);
+        m=unique(b+1,b+1+n)-b-1;
+        REP(i,n-1) {
+            int x,y; scanf("%d%d", &x,&y);
+            add(x,y); add(y,x);
+        }
+        dfs(1); dfs(1,1);
+        int ans=0;
+        while (q--) {
+            int x,y,z; scanf("%d%d%d", &x,&y,&z);
+            x^=ans;
+            int lca=LCA(x,y);
+            ans=b[query(root[x],root[y],root[lca],root[fa[lca]],1,m,z)];
+            printf("%d\n", ans);
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+Sequence II HDU - 5919
+
+主席树 区间不同数个数 区间不同数第一次出现位置第k个位置 强制在线 模板
+
+假设一个区间出现了k个不同的数，每个数第一次出现的位置从小到大记为p[i]，求p[(k+1)/2]
+
+方法一（TLE）：预处理出每个数上一个出现的位置pre[i]，这样预处理出pre数组，求一个区间[l,r]不同数个数即求这个pre数组区间种小于l的数有多少个，对于求中位数，二分一个m，求区间[l,m]的不同数个数。复杂度为O(nlogn\^2)，在hdu上会超时
+
+方法二：只维护第一次出现的位置，逆序遍历，如果第一次出现，该位置加1，否则还要把之前出现的位置减1。这样相当于维护了n个版本的线段树，每次单点修改。查询一个区间有多少个不同数个数，即相当于版本root[l]的中小于等于r的个数，即区间求和，跟线段树求和一样。假如有num个不同，现在要查第(num+1)/2的位置，即第k大，方法跟主席树一样，比较左右两个子树的size递归遍历下去即可。复杂度为O(nlogn)
+
+\begin{lstlisting}
+int n,q,a[MAXN];
+#define mid (l+r)/2
+int sum[MAXN<<6],L[MAXN<<6],R[MAXN<<6],root[MAXN],tot;
+void init(){ tot=0; }
+int cp(int x){ sum[++tot]=sum[x]; L[tot]=L[x]; R[tot]=R[x]; return tot; }
+void update(int& x, int v, int l, int r, int p, int d) {
+    x=cp(v); sum[x]+=d;
+    if (l<r) {
+        if (p<=mid) update(L[x],L[x],l,mid,p,d);
+        else update(R[x],R[x],mid+1,r,p,d);
+    }
+}
+int query_sum(int x, int l, int r, int ll, int rr) {
+    if (ll<=l && r<=rr) return sum[x];
+    int ans=0;
+    if (ll<=mid) ans+=query_sum(L[x],l,mid,ll,rr);
+    if (mid<rr) ans+=query_sum(R[x],mid+1,r,ll,rr);
+    return ans;
+}
+int kth(int x, int l, int r, int k) {
+    if (l==r) return l;
+    int sz=sum[L[x]];
+    if (k<=sz) return kth(L[x],l,mid,k);
+    return kth(R[x],mid+1,r,k-sz);
+}
+
+int main()
+{
+
+    int T; scanf("%d", &T);
+    FOR(kase,1,T) {
+        init();
+        printf("Case #%d:", kase);
+        scanf("%d%d", &n,&q);
+        FOR(i,1,n) scanf("%d", &a[i]);
+        map<int,int> mp;
+        root[n+1]=0;
+        ROF(i,1,n) {
+            update(root[i],root[i+1],1,n,i,1);
+            if (mp.count(a[i])) update(root[i],root[i],1,n,mp[a[i]],-1);
+            mp[a[i]]=i;
+        }
+        int ans=0;
+        while (q--) {
+            int l,r; scanf("%d%d", &l,&r);
+            l=(l+ans)%n+1, r=(r+ans)%n+1;
+            if (l>r) swap(l,r);
+            int num=query_sum(root[l],1,n,l,r);
+            ans=kth(root[l],1,n,(num+1)/2);
+            printf(" %d", ans);
+        }
+        puts("");
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+P3168 [CQOI2015]任务查询系统
+
+差分 区间前k小数之和 强制在线 模板
+
+给n个区间，每个区间有一个权值，问某个点所在所有区间中前k小权值之和为多少
+
+容易想到差分，对于每个区间，在l点+1，在r+1点-1，询问前缀和，区间前k小权值和用主席树维护。
+
+注意有一个容易错的地方，当有多个相同的数时，前k小不能仅仅用size判断了
+
+主席树不用离散化的方法：l=1,r=1e18，r理论大于可能的最大值即可。观察update函数，由于是动态开点，每次update消耗log(r-l)的空间，共有n次update，所以空间复杂度是O(nlog(max\_r-min\_l))，所以r取足够大也不怕
+
+\begin{lstlisting}
+#define mid (l+r)/2
+int sz[MAXN<<7],L[MAXN<<7],R[MAXN<<7],root[MAXN],tot;
+LL sum[MAXN<<7];
+void init(){ tot=0; }
+int cp(int x){ sz[++tot]=sz[x]; L[tot]=L[x]; R[tot]=R[x]; sum[tot]=sum[x]; return tot; }
+void update(int& x, int v, int l, int r, int val) {
+    x=cp(v); sz[x]+=(val>0?1:-1); sum[x]+=val;
+    if (l<r) {
+        if (abs(val)<=mid) update(L[x],L[x],l,mid,val);
+        else update(R[x],R[x],mid+1,r,val);
+    }
+}
+LL query(int x, int l, int r, int k) {
+    if (k<=0) return 0;
+    if (sz[x]<=k) return sum[x];
+    if (l==r) return (LL)k*l;
+    return query(L[x],l,mid,k)+query(R[x],mid+1,r,k-sz[L[x]]);
+}
+
+int main()
+{
+
+    init();
+    int n,q; scanf("%d%d", &n,&q);
+    map<int,vector<pii> > mp;
+    FOR(i,1,n) {
+        int l,r,val; scanf("%d%d%d", &l,&r,&val);
+        mp[l].pb({l,val});
+        mp[r+1].pb({r+1,-val});
+    }
+    FOR(i,1,n) {
+        root[i]=cp(root[i-1]);
+        for (auto& j:mp[i]) {
+            update(root[i],root[i],1,1e7,j.se);
+        }
+    }
+    LL ans=1;
+    while (q--) {
+        int x,a,b,c; scanf("%d%d%d%d", &x,&a,&b,&c);
+        ans=query(root[x],1,1e7,1+(a*ans+b)%c);
+        printf("%lld\n", ans);
+    }
+
+    return 0;
+}
+\end{lstlisting}

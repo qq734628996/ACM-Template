@@ -1,0 +1,282 @@
+\section{博弈论}
+
+https://www.bilibili.com/video/av9114486?from=search\&seid=1678403368497689776
+
+Brave Game HDU - 1846
+
+Bash博弈
+
+有n个石子，每人最多取m个，轮流操作
+
+n\%(m+1)
+
+\begin{lstlisting}
+int main()
+{
+
+    int T; scanf("%d", &T);
+    while (T--) {
+        int a,b; scanf("%d%d", &a,&b);
+        if (a%(b+1)) puts("first");
+        else puts("second");
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+取石子游戏 HDU - 2516
+
+斐波那契博弈裸题
+
+n个石子轮流取，第一次可以取任意多个但不能全部取完，以后每次取石子不能超过上次取数的两倍，取完者胜
+
+如果是斐波那契数，必败，否则必胜
+
+\begin{lstlisting}
+LL n,fib[55];
+
+int main()
+{
+
+    fib[1]=1;
+    FOR(i,2,54) fib[i]=fib[i-1]+fib[i-2];
+    while (cin>>n && n) {
+        bool ok=true;
+        FOR(i,2,54) {
+            if (fib[i]==n) ok=false;
+            if (fib[i]>n) break;
+        }
+        puts(ok?"First win":"Second win");
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+威佐夫博弈(Wythoff Game)：两堆物品，两人轮流从某堆或者同时在两堆物品中取同样多的物品，至少一个，不能操作者输
+
+奇异局势：必败的局势形如(ak,bk)，ak为之前未出现过的最小自然数，bk=ak+k
+
+判断奇异局势：(b-a)*(sqrt(5)+1)/2==a
+
+取石子游戏 POJ - 1067
+
+威佐夫博弈裸题
+
+\begin{lstlisting}
+int main()
+{
+
+    int a,b;
+    while (scanf("%d%d", &a,&b)==2) {
+        if (a>b) swap(a,b);
+        int c=floor((b-a)*(sqrt(5)+1)/2);
+        puts(a==c?"0":"1");
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+Nim游戏：
+
+奇异局势：异或和等于0
+
+奇异局势的转换：假设异或和为sum，对于任意一个数ai，如果sum\^ai<ai，则可以拿走ai-(sum\^ai)个数。
+
+Being a Good Boy in Spring Festival HDU - 1850
+
+Nim游戏裸题
+
+如果有解，输出第一步可行解的方案数
+
+\begin{lstlisting}
+int n,a[MAXN];
+
+int main()
+{
+
+    while (scanf("%d", &n)==1 && n) {
+        int ans=0,cnt=0;
+        REP(i,n) scanf("%d", &a[i]), ans^=a[i];
+        if (!ans) puts("0");
+        else {
+            REP(i,n) {
+                int t=ans^a[i];
+                if (t<a[i]) cnt++;
+            }
+            printf("%d\n", cnt);
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+Good Luck in CET-4 Everybody!HDU - 1847
+
+SG函数
+
+SG函数由记忆化搜索得到
+
+\begin{lstlisting}
+int n,sg[MAXN],a[22];
+int mex(int i)
+{
+    if (~sg[i]) return sg[i];
+    int vis[MAXN];
+    memset(vis,0,sizeof(vis));
+    REP(j,11) {
+        int k=i-a[j];
+        if (k<0) break;
+        vis[mex(k)]=1;
+    }
+    REP(j,MAXN) if (!vis[j]) { sg[i]=j; break; }
+    return sg[i];
+}
+
+int main()
+{
+
+    a[0]=1;
+    FOR(i,1,10) a[i]=a[i-1]*2;
+    memset(sg,-1,sizeof(sg));
+    while (scanf("%d", &n)==1) {
+        puts(mex(n)?"Kiki":"Cici");
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+kuangbin博弈
+
+Game of CS LightOJ - 1355
+
+green博弈变形
+
+参考了网上题解
+
+green博弈：给定一颗树，每次可以删掉一些边并且连带删掉子树，不能操作者输。此题稍有不同，每条边有一个权值，每次只能使权值减一，减为零即可删掉整个子树
+
+结论：如果边权为1，即green博弈，sg(u)\^=sg(v)+1，如果边权大于1，只有是奇数的时候有贡献：sg(u)\^=sg(v)\^1
+
+\begin{lstlisting}
+int to[MAXN],dis[MAXN],f[MAXN],nxt[MAXN],tot;
+void init()
+{
+    tot=0;
+    memset(f,-1,sizeof(f));
+}
+void add(int u, int v, int w)
+{
+    to[tot]=v;
+    dis[tot]=w;
+    nxt[tot]=f[u];
+    f[u]=tot++;
+}
+int n;
+int sg(int u, int fa)
+{
+    int ans=0;
+    for (int i=f[u]; ~i; i=nxt[i]) {
+        int v=to[i], w=dis[i];
+        if (v==fa) continue;
+        if (w==1) ans^=sg(v,u)+1;
+        else ans^=sg(v,u)^(w&1);
+    }
+    return ans;
+}
+
+int main()
+{
+
+    int T; scanf("%d", &T);
+    FOR(kase,1,T) {
+        init();
+        scanf("%d", &n);
+        REP(i,n-1) {
+            int x,y,z; scanf("%d%d%d", &x,&y,&z);
+            add(x,y,z);
+            add(y,x,z);
+        }
+        printf("Case %d: %s\n", kase,sg(0,-1)?"Emily":"Jolly");
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+Misere Nim LightOJ - 1253
+
+反Nim博弈裸题
+
+反Nim博弈：取到最后的石子的人输
+
+如果全是1，当且仅当异或和为0必胜，否则异或和非0必胜。
+
+\begin{lstlisting}
+int a[MAXN];
+
+int main()
+{
+
+    int T; scanf("%d", &T);
+    FOR(kase,1,T) {
+        int n; scanf("%d", &n);
+        REP(i,n) scanf("%d", &a[i]);
+        int sum=0;
+        REP(i,n) sum^=a[i];
+        bool flag=true;
+        REP(i,n) if (a[i]!=1) flag=false;
+        printf("Case %d: %s\n", kase,((flag&&!sum)||(!flag&&sum))?"Alice":"Bob");
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+\subsection{组合游戏总结}
+
+Nim游戏：简单来说可以是n个数，轮流操作，每次选择一个数减小或者删掉，不能操作者输。
+
+1. 两个游戏者轮流操作
+
+2. 游戏的状态集有限，并且不管双方怎么走，都不会再现以前出现过的状态。
+
+3. 谁不能操作谁输。
+
+
+相关术语：
+
+1. 一个状态是必败状态当且仅当它的所有后继都是必败状态。
+
+2. 一个状态是必胜状态当且仅当它至少有一个后继是必败状态。
+
+
+暴力解法：根据状态集，dp
+
+Ferguson游戏：Nim的特例？
+
+Chomp!游戏：有一个m*n的棋盘，每次可以取走一个方块并拿走这个方块右边及上边的所有方块，拿到最后一块方块的人输。
+
+结论：除非开局只有一个方块，否则先手必胜
+
+证明：假设后手有必胜决策可以达到必胜状态，则先手必可以抢先后手达到这个必胜状态，矛盾。
+
+约数游戏：有1~n个数，轮流拿一个数并且拿走拿走它的约数，拿到最后一个数的胜。
+
+结论：类似Chomp!游戏，先手必胜。
+
+Bouton定理：状态(x\_1,x\_2,x\_3)是必败状态当且仅当x\_1\^x\_2\^x\_3=0，这个结果也称Nim和，这个定理可以推广到n维状态。
+
+先手胜操作步骤：异或结果最高位的1记为第k位，找一个第k位为1的数，把它修改（注意第k位变为0，数肯定减小了），使得异或结果为0
+
+证明：归纳法
+
+组合游戏的和：由k个组合游戏构成的新游戏。
+
+SG函数：SG(x)=mex(S)，S为状态x的后继状态集，mex函数表示不在"S所有元素的SG函数值"中的最小非负整数。
+
+SG定理：SG(x)的值等于各子游戏的Nim和。

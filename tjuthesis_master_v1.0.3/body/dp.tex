@@ -1,0 +1,512 @@
+\section{数位DP}
+
+
+
+\begin{lstlisting}
+typedef long long ll;
+int a[20];
+ll dp[20][state];//@不同题目状态不同@
+ll dfs(int pos,/*state@变量@*/,bool lead/*@前导零@*/,bool limit/*@数位上界变量@*/)//@不是每个题都要判断前导零@
+{
+    //@递归边界，既然是按位枚举，最低位是0，那么pos==-1说明这个数我枚举完了@
+    if(pos==-1) return 1;/*@这里一般返回1，表示你枚举的这个数是合法的，那么这里就需要你在枚举时必须每一位都要满足题目条件，也就是说当前枚举到pos位，一定要保证前面已经枚举的数位是合法的。不过具体题目不同或者写法不同的话不一定要返回1 @*/
+    //@第二个就是记忆化(在此前可能不同题目还能有一些剪枝)@
+    if(!limit && !lead && dp[pos][state]!=-1) return dp[pos][state];
+    /*@常规写法都是在没有限制的条件记忆化，这里与下面记录状态是对应，具体为什么是有条件的记忆化后面会讲@*/
+    int up=limit?a[pos]:9;//@根据limit判断枚举的上界up;这个的例子前面用213讲过了@
+    ll ans=0;
+    //@开始计数@
+    for(int i=0;i<=up;i++)//@枚举，然后把不同情况的个数加到ans就可以了@
+    {
+        if() ...
+        else if()...
+        ans+=dfs(pos-1,/*@状态转移@*/,lead && i==0,limit && i==a[pos]) //@最后两个变量传参都是这样写的@
+        /*@这里还算比较灵活，不过做几个题就觉得这里也是套路了@
+        @大概就是说，我当前数位枚举的数是i，然后根据题目的约束条件分类讨论@
+        @去计算不同情况下的个数，还有要根据state变量来保证i的合法性，比如题目@
+        @要求数位上不能有62连续出现,那么就是state就是要保存前一位pre,然后分类，@
+        @前一位如果是6那么这意味就不能是2，这里一定要保存枚举的这个数是合法@*/
+    }
+    //@计算完，记录状态@
+    if(!limit && !lead) dp[pos][state]=ans;
+    /*@这里对应上面的记忆化，在一定条件下时记录，保证一致性，当然如果约束条件不需要考虑lead，这里就是lead就完全不用考虑了@*/
+    return ans;
+}
+ll solve(ll x)
+{
+    int pos=0;
+    while(x)//@把数位都分解出来@
+    {
+        a[pos++]=x%10;//@个人老是喜欢编号为[0,pos),看不惯的就按自己习惯来，反正注意数位边界就行@
+        x/=10;
+    }
+    return dfs(pos-1/*@从最高位开始枚举@*/,/*@一系列状态 @*/,true,true);//@刚开始最高位都是有限制并且有前导零的，显然比最高位还要高的一位视为0嘛@
+}
+int main()
+{
+    ll le,ri;
+    while(~scanf("%lld%lld",&le,&ri))
+    {
+        //@初始化dp数组为-1,这里还有更加优美的优化,后面讲@
+        printf("%lld\n",solve(ri)-solve(le-1));
+    }
+}
+\end{lstlisting}
+
+不要62 HDU - 2089
+
+经典
+
+统计[L,R]内不含4和62的个数。
+
+优化一：
+
+memset放外面，因为约束条件是62和4，是确定的，跟数本身没关系。
+
+\begin{lstlisting}
+int L,R,a[10],d[10][2];
+int dp(int pos, bool if6, bool limit)
+{
+    if (pos==-1) return 1;
+    if (!limit && ~d[pos][if6]) return d[pos][if6];
+    int ans=0;
+    int n=limit?a[pos]:9;
+    FOR(i,0,n) {
+        if (i==4) continue;
+        if (if6 && i==2) continue;
+        ans+=dp(pos-1,i==6,limit&&i==a[pos]);
+    }
+    if (!limit) d[pos][if6]=ans;
+    return ans;
+}
+int solve(int x)
+{
+    int cnt=0;
+    while (x) {
+        a[cnt++]=x%10;
+        x/=10;
+    }
+    return dp(cnt-1,false,true);
+}
+
+int main()
+{
+
+    memset(d,-1,sizeof(d));
+    while (scanf("%d%d", &L,&R)==2 && L&&R) {
+        printf("%d\n", solve(R)-solve(L-1));
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+F(x) HDU - 4734
+
+定义了f(x)=d[n]*2\^(n-1)+d[n-1]*2\^(n-2)+...+d[2]*2+d[1]*1，其中d[k]表示正整数x的第k个数位。求[0,b]中满足f(i)<f(a)的个数。
+
+可以想到用d[pos][sum]表示状态，sum为当前的和，如果每次累加的话，需要每次清空d数组，会超时。
+
+如果用d[pos][sum]表示pos位数不超过sum的数个数，每次累减，则只需要清空一次d数组即可。
+
+\begin{lstlisting}
+int a,b,c[11],d[11][MAXN],ma;
+int dp(int pos, int sum, bool limit)
+{
+    if (sum<0) return 0;
+    if (pos==-1) return 1;
+    if (!limit && ~d[pos][sum]) return d[pos][sum];
+    int ans=0;
+    int up=limit?c[pos]:9;
+    FOR(i,0,up) {
+        ans+=dp(pos-1,sum-i*(1<<pos),limit&&i==up);
+    }
+    if (!limit) d[pos][sum]=ans;
+    return ans;
+}
+
+int main()
+{
+
+    memset(d,-1,sizeof(d));
+    int T; scanf("%d", &T);
+    FOR(i,1,T) {
+        scanf("%d%d", &a,&b);
+        ma=0;
+        for (int j=0; a; j++) {
+            ma+=(a%10)*(1<<j);
+            a/=10;
+        }
+        int cnt=0;
+        while (b) {
+            c[cnt++]=b%10;
+            b/=10;
+        }
+        printf("Case #%d: %d\n", i,dp(cnt-1,ma,true));
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+Round Numbers POJ - 3252
+
+模板
+
+求二进制中0个数不少于1个数的数个数。类似的变形还有计数01个数相等的题目
+
+如果0减一，如果1加一，最后判断sum不大于初始值即可。需要维护limit还需要维护一个前导零lead，以便得知什么时候能开始对sum加减。
+
+\begin{lstlisting}
+int a[33],d[33][66];
+int dp(int pos, int sum, bool limit, bool lead)
+{
+    if (pos==-1) return sum<=33;
+    if (!limit && !lead && ~d[pos][sum]) return d[pos][sum];
+    int ans=0, up=limit?a[pos]:1;
+    FOR(i,0,up) {
+        int add=i?1:-1;
+        if (lead && !i) add=0;
+        ans+=dp(pos-1,sum+add,limit&&i==up,lead&&!i);
+    }
+    if (!limit && !lead) d[pos][sum]=ans;
+    return ans;
+}
+int solve(int x)
+{
+    int cnt=0;
+    while (x) {
+        a[cnt++]=(x&1);
+        x>>=1;
+    }
+    return dp(cnt-1,33,true,true);
+}
+
+int main()
+{
+
+    memset(d,-1,sizeof(d));
+    int L,R;
+    while (scanf("%d%d", &L,&R)==2 && L&&R) {
+        printf("%d\n", solve(R)-solve(L-1));
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+\section{斜率DP}
+
+$d_i=\min \left ( -a_i x_j + y_j \right ) + w_i$
+
+$d_i=\max \left ( -a_i x_j + y_j \right ) + w_i$
+
+令$b=-a_i x_j + y_j$
+
+移项：$y_i=a_i x_j + b$
+
+如果是求最小值，即求b最小值，问题即是在凸包的点中找一个点使得b最小
+
+模板：
+
+\begin{lstlisting}
+struct point {
+    LL x,y;
+    point operator-(const point& p) const {
+        return (point){x-p.x,y-p.y};
+    }
+};
+inline LL cross(const point& u, const point& v)
+{
+    return u.x*v.y-v.x*u.y;
+}
+struct dequeue {
+    point q[MAXN];
+    int st,ed;
+    void init() { st=1; ed=0; }
+    void push(const point& u) {
+        while (st<ed && cross(q[ed]-q[ed-1],u-q[ed-1])<=0) ed--;
+        q[++ed]=u;
+    }
+    point pop(const LL& k) {
+        while (st<ed && -k*q[st].x+q[st].y >= -k*q[st+1].x+q[st+1].y) st++;
+        return q[st];
+    }
+} Q;
+// d[i] = -k*x[j] + y[j] + w
+void solve()
+{
+    Q.init();
+    //Q.push((point){0,0});
+    FOR(i,1,n) {
+        point t=Q.pop(k);
+        d[i]=-k*p.x+t.y+w;
+        Q.push((point){x[i],y[i]});
+    }
+}
+\end{lstlisting}
+
+Pearls HDU - 1300
+
+n个珍珠要买a[i]个，价格为p[i]，单买要加上基础价10*p[i]，也可以和贵的珍珠一起买不需要付基础价
+
+要么单买，要么连续地买，因为比如a,b,c三种，如果a要跳过b用c的价格买，那还不如用b的价格买。
+
+d[i]=min(d[j]+(a[i]-a[j]+10)*p[i]), (j<i)
+
+可以用斜率优化，虽然规模其实很小。
+
+\begin{lstlisting}
+int n,a[MAXN],d[MAXN];
+
+int main()
+{
+
+    int T; scanf("%d", &T);
+    while (T--) {
+        scanf("%d", &n);
+        FOR(i,1,n) {
+            int p;
+            scanf("%d%d", &a[i],&p);
+            a[i]+=a[i-1];
+            d[i]=INF;
+            REP(j,i) d[i]=min(d[i],d[j]+(a[i]-a[j]+10)*p);
+        }
+        printf("%d\n", d[n]);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+MAX Average Problem HDU - 2993
+
+经典，最大平均值问题
+
+求区间长度至少为k的最大的区间平均值
+
+NOI2004年周源的论文《浅谈数形结合思想在信息学竞赛中的应用》
+
+参考 白书 第一章 Average, Seoul, UVALive - 4726， 或参考紫书 例题8-9
+
+这道题很坑爹就是规模太大了，并且用int会WA
+
+用了能读到文件末尾的输入挂，对代码常数进行了很细致的优化（详细对比汝佳源码和这份代码），需要用LL否则会WA
+
+\begin{lstlisting}
+namespace IN {
+    const int N=2e6+10;
+    char str[N],*S=str,*T=str;
+    inline char rdc()
+    {
+        if (S==T) {
+            T=(S=str)+fread(str,1,N,stdin);
+            if (S==T) exit(0);
+        }
+        return *S++;
+    }
+    inline int rd()
+    {
+        int x=0;
+        char t=rdc();
+        while (t>'9'||t<'0') t=rdc();
+        while ('0'<=t&&t<='9') x=x*10+t-'0', t=rdc();
+        return x;
+    }
+}
+int n,L,a[MAXN];
+int q[MAXN];
+LL cmp(int x1, int x2, int x3, int x4)
+{
+    return (LL)(a[x2]-a[x1])*(x4-x3) - (LL)(a[x4]-a[x3])*(x2-x1);
+}
+bool cmp2(int x1, int x3, int x4)
+{
+    return (LL)(a[x4]-a[x1])*(x4-x3) >= (LL)(a[x4]-a[x3])*(x4-x1);
+}
+
+int main()
+{
+
+    while (1) {
+        n=IN::rd(); L=IN::rd();
+        FOR(i,1,n) a[i]=IN::rd(), a[i]+=a[i-1];
+        int st=1, ed=0, ansL=1, ansR=L;
+        FOR(i,L,n) {
+            while (st<ed && cmp2(q[ed-1]-1,q[ed]-1,i-L)) ed--;
+            q[++ed]=i-L+1;
+            while (st<ed && cmp2(q[st+1]-1,q[st]-1,i)) st++;
+            if (cmp(q[st]-1,i,ansL-1,ansR)>0) {
+                ansL=q[st];
+                ansR=i;
+            }
+        }
+        printf("%.2f\n", (double)(a[ansR]-a[ansL-1])/(ansR-ansL+1));
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+Picnic Cows HDU - 3045
+
+给一些数，把他们分组，每组不少于T个数，每个组每个数分别减去这个组最小的数之后求和为这个组的费用，所有组费用加起来为总费用，求总费用最小。
+
+先把数排序，斜率dp的套路就显现出来了——每个数要么单独选，要么与前面连续几个数一起选
+
+d[i]=min(d[j]+S[i]-S[j]-(i-j)*a[j+1])
+
+=min(-i*a[j+1]+j*a[j+1]+d[j]-S[j])+S[i]
+
+套模板即可，初始化条件是(a[1],0)，另外由于要求每个组数不少于L个，所以先把d预处理为-1，当d[i-L+1]不是-1时才进队
+
+\begin{lstlisting}
+struct point {
+    LL x,y;
+    point operator-(const point& p) const {
+        return (point){x-p.x, y-p.y};
+    }
+};
+inline LL cross(const point& u, const point& v) {
+    return u.x*v.y - v.x*u.y;
+}
+struct dequeue {
+    point q[MAXN];
+    int st,ed;
+    void init() { st=1, ed=0; }
+    void push(const point& u) {
+        while (st<ed && cross(q[ed]-q[ed-1],u-q[ed-1])<=0) ed--;
+        q[++ed]=u;
+    }
+    point pop(const LL& k) {
+        while (st<ed && -k*q[st].x+q[st].y >= -k*q[st+1].x+q[st+1].y) st++;
+        return q[st];
+    }
+} Q;
+int n,L;
+LL a[MAXN],S[MAXN],d[MAXN];
+void solve()
+{
+    Q.init();
+    FOR(i,0,n) d[i]=-1;
+    Q.push((point){a[1],0});
+    FOR(i,L,n) {
+        LL k=i;
+        LL w=S[i];
+        point t=Q.pop(k);
+        d[i]=-k*t.x+t.y+w;
+        int j=i-L+1;
+        if (~d[j]) Q.push((point){a[j+1],j*a[j+1]-S[j]+d[j]});
+    }
+    printf("%lld\n", d[n]);
+}
+
+int main()
+{
+
+    while (scanf("%d%d", &n,&L)==2) {
+        FOR(i,1,n) scanf("%lld", &a[i]);
+        sort(a+1,a+1+n);
+        FOR(i,1,n) S[i]=a[i]+S[i-1];
+        solve();
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+\section{区间DP}
+
+四边形不等式优化
+
+\begin{lstlisting}
+for (int i=0; i<=n; i++) {
+    g[i][i]=i;
+}
+for (int len=1; len<=n; len++) {
+    for (int i=1; i<=n-len; i++) {
+        int j=i+len;
+        f[i][j]=INF;
+        for (int k=g[i][j-1]; k<=g[i+1][j]; k++) {
+            if (f[i][j]>f[i][k]+f[k+1][j]+w[i][j]) {
+                f[i][j]=f[i][k]+f[k+1][j]+w[i][j];
+                g[i][j]=k;
+            }
+        }
+    }
+}
+\end{lstlisting}
+
+Palindrome subsequence HDU - 4632
+
+求回文子序列个数
+
+经典
+
+f[i][j]=f[i+1][j]+f[i][j-1]-f[i+1][j-1]，由容斥原理得到
+
+if (s[i]==s[j]) f[i][j]+=f[i+1][j-1]+1，如果s[i]==s[j]，说明区间[i+1,j-1]所有子序列加上i和j又可以得到新的子序列，个数为f[i+1][j-1]，还有加上1个s[i]和s[j]构成的子序列。
+
+注意求模时产生负数的处理
+
+\begin{lstlisting}
+int n,f[MAXN][MAXN];
+char s[MAXN];
+
+int main()
+{
+
+    int T; scanf("%d", &T);
+    FOR(kase,1,T) {
+        scanf("%s", s+1);
+        n=strlen(s+1);
+        FOR(i,1,n) f[i][i]=1;
+        FOR(len,1,n)FOR(i,1,n-len) {
+            int j=i+len;
+            f[i][j]=f[i][j-1]+f[i+1][j]-f[i+1][j-1];
+            if (s[i]==s[j]) f[i][j]+=f[i+1][j-1]+1;
+            f[i][j]%=MOD;
+        }
+        printf("Case %d: %d\n", kase,(f[1][n]+MOD)%MOD);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+Brackets POJ - 2955
+
+括号匹配
+
+经典
+
+给一个括号组成的序列，问最长的合法括号子序列有多长
+
+如果序列两端是一对括号，那么方程可以由去掉这对括号的子序列转移而来，并且还有以下转移：d[i][j]=d[i][k]+d[k+1][j]
+
+\begin{lstlisting}
+int main()
+{
+
+    while (scanf("%s", s+1)==1 && s[1]!='e') {
+        n=strlen(s+1);
+        FOR(i,1,n) {
+            switch (s[i]) {
+                case '(': a[i]=-2; break;
+                case '[': a[i]=-1; break;
+                case ']': a[i]=1; break;
+                case ')': a[i]=2; break;
+            }
+        }
+        FOR(len,1,n)FOR(i,1,n-len) {
+            int j=i+len;
+            d[i][j]=d[i+1][j-1];
+            if (a[i]<0 && a[i]+a[j]==0) d[i][j]+=2;
+            FOR(k,i,j) d[i][j]=max(d[i][j], d[i][k]+d[k+1][j]);
+        }
+        printf("%d\n", d[1][n]);
+    }
+
+    return 0;
+}
+\end{lstlisting}

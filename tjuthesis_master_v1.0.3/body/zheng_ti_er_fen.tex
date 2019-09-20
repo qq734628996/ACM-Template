@@ -1,0 +1,242 @@
+\section{整体二分}
+
+P3834 【模板】可持久化线段树 1（主席树）
+
+静态区间第k大 整体二分 模板
+
+巨坑爹的地方是，只能用(l+r)>>1而不能用(l+r)/2，因为有负数，导致取整方向不对，导致二分死循环。
+
+\begin{lstlisting}
+struct query {
+    int l,r,k,op,ind;
+} q[MAXN<<1],q1[MAXN<<1],q2[MAXN<<1];
+struct BIT {
+    int n,tree[MAXN];
+    void init(int n){ this->n=n; memset(tree,0,sizeof(tree)); }
+    void add(int x, int d){ for (; x<=n; x+=x&-x) tree[x]+=d; }
+    int sum(int x){ int ans=0; for (; x; x-=x&-x) ans+=tree[x]; return ans; }
+} bit;
+int n,m,res[MAXN];
+void solve(int l, int r, int ql, int qr) {
+    if (ql>qr) return;
+    if (l==r) {
+        FOR(i,ql,qr) if (q[i].op==2) res[q[i].ind]=l;
+        return;
+    }
+    int mid=(l+r)>>1,cnt1=0,cnt2=0;
+    FOR(i,ql,qr) {
+        if (q[i].op==1) {
+            if (q[i].l<=mid) q1[++cnt1]=q[i], bit.add(q[i].ind,q[i].r);
+            else q2[++cnt2]=q[i];
+        } else {
+            int x=bit.sum(q[i].r)-bit.sum(q[i].l-1);
+            if (q[i].k<=x) q1[++cnt1]=q[i];
+            else q[i].k-=x, q2[++cnt2]=q[i];
+        }
+    }
+    FOR(i,1,cnt1) if (q1[i].op==1) bit.add(q1[i].ind,-q[i].r);
+    FOR(i,1,cnt1) q[ql+i-1]=q1[i];
+    FOR(i,1,cnt2) q[ql+i-1+cnt1]=q2[i];
+    solve(l,mid,ql,ql+cnt1-1);
+    solve(mid+1,r,ql+cnt1,qr);
+}
+
+int main()
+{
+
+
+    while (scanf("%d%d", &n,&m)==2) {
+        FOR(i,1,n) {
+            int x; scanf("%d", &x);
+            q[i]={x,0,0,1,i};
+        }
+        FOR(i,1,m) {
+            int l,r,k; scanf("%d%d%d", &l,&r,&k);
+            q[n+i]={l,r,k,2,i};
+        }
+        bit.init(n);
+        solve(-INF,INF,1,n+m);
+        FOR(i,1,m) printf("%d\n", res[i]);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+P2617 Dynamic Rankings
+
+单点修改 区间第k大 整体二分 模板
+
+不吸氧比吸氧的带修主席树快一倍，吸氧用时是吸氧的带修主席树的1/5
+
+\begin{lstlisting}
+struct query {
+    int l,r,k,ind,op;
+} q[MAXN*3],q1[MAXN*3],q2[MAXN*3];
+struct BIT {
+    int n,tree[MAXN];
+    void init(int n){ this->n=n; memset(tree,0,sizeof(tree)); }
+    void add(int x, int d){ for (; x<=n; x+=x&-x) tree[x]+=d; }
+    int sum(int x){ int ans=0; for (; x; x-=x&-x) ans+=tree[x]; return ans; }
+} bit;
+int n,m,a[MAXN],cnt,tot,res[MAXN];
+void solve(int l, int r, int ql, int qr) {
+    if (ql>qr) return;
+    if (l==r) {
+        FOR(i,ql,qr) if (q[i].op==2) res[q[i].ind]=l;
+        return;
+    }
+    int mid=(l+r)>>1,cnt1=0,cnt2=0;
+    FOR(i,ql,qr) {
+        if (q[i].op==1) {
+            if (q[i].l<=mid) q1[++cnt1]=q[i], bit.add(q[i].ind,q[i].r);
+            else q2[++cnt2]=q[i];
+        } else {
+            int x=bit.sum(q[i].r)-bit.sum(q[i].l-1);
+            if (q[i].k<=x) q1[++cnt1]=q[i];
+            else q[i].k-=x, q2[++cnt2]=q[i];
+        }
+    }
+    FOR(i,1,cnt1) if (q1[i].op==1) bit.add(q1[i].ind,-q1[i].r);
+    FOR(i,1,cnt1) q[ql+i-1]=q1[i];
+    FOR(i,1,cnt2) q[ql+i-1+cnt1]=q2[i];
+    solve(l,mid,ql,ql+cnt1-1);
+    solve(mid+1,r,ql+cnt1,qr);
+}
+
+int main()
+{
+
+    while (scanf("%d%d", &n,&m)==2) {
+        cnt=tot=0;
+        FOR(i,1,n) {
+            scanf("%d", &a[i]);
+            q[++cnt]={a[i],1,0,i,1};
+        }
+        FOR(i,1,m) {
+            char op[2]; scanf("%s", op);
+            if (op[0]=='Q') {
+                int l,r,k; scanf("%d%d%d", &l,&r,&k);
+                q[++cnt]={l,r,k,++tot,2};
+            } else {
+                int p,x; scanf("%d%d", &p,&x);
+                q[++cnt]={a[p],-1,0,p,1};
+                q[++cnt]={a[p]=x,1,0,p,1};
+            }
+        }
+        bit.init(n);
+        solve(-INF,INF,1,cnt);
+        FOR(i,1,tot) printf("%d\n", res[i]);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+P3332 [ZJOI2013]K大数查询
+
+区间加 区间第k大 整体二分 模板
+
+题意：区间加上一个数，不是累加，是添一个数
+
+\begin{lstlisting}
+namespace ST {
+    #define ls x<<1
+    #define rs x<<1|1
+    #define mid ((l+r)>>1)
+    struct node {
+        int l,r;
+        LL sum,add;
+        void update(LL val) {
+            sum+=val*(r-l+1);
+            add+=val;
+        }
+    } tree[MAXN<<2];
+    void down(int x) {
+        if (tree[x].add) {
+            tree[ls].update(tree[x].add);
+            tree[rs].update(tree[x].add);
+            tree[x].add=0;
+        }
+    }
+    void up(int x) {
+        tree[x].sum=tree[ls].sum+tree[rs].sum;
+    }
+    void build(int x, int l, int r) {
+        tree[x]={l,r,0,0};
+        if (l<r) {
+            build(ls,l,mid);
+            build(rs,mid+1,r);
+        }
+    }
+    void update(int x, int l, int r, int ql, int qr, LL val) {
+        if (ql<=l && r<=qr) tree[x].update(val);
+        else {
+            down(x);
+            if (ql<=mid) update(ls,l,mid,ql,qr,val);
+            if (mid<qr) update(rs,mid+1,r,ql,qr,val);
+            up(x);
+        }
+    }
+    LL query(int x, int l, int r, int ql, int qr) {
+        if (ql<=l && r<=qr) return tree[x].sum;
+        else {
+            LL ans=0;
+            down(x);
+            if (ql<=mid) ans+=query(ls,l,mid,ql,qr);
+            if (mid<qr) ans+=query(rs,mid+1,r,ql,qr);
+            up(x);
+            return ans;
+        }
+    }
+    #undef mid
+}
+struct query {
+    int l,r;
+    LL k;
+    int ind,op;
+} q[MAXN],q1[MAXN],q2[MAXN];
+int n,m,tot,res[MAXN];
+void solve(int l, int r, int ql, int qr) {
+    if (ql>qr) return;
+    if (l==r) {
+        FOR(i,ql,qr) if (q[i].op==2) res[q[i].ind]=l;
+        return;
+    }
+    int mid=(l+r)>>1,cnt1=0,cnt2=0;
+    FOR(i,ql,qr) {
+        if (q[i].op==1) {
+            if (q[i].k<=mid) q1[++cnt1]=q[i];
+            else q2[++cnt2]=q[i], ST::update(1,1,n,q[i].l,q[i].r,1);
+        } else {
+            LL x=ST::query(1,1,n,q[i].l,q[i].r);
+            if (q[i].k<=x) q2[++cnt2]=q[i];
+            else q[i].k-=x, q1[++cnt1]=q[i];
+        }
+    }
+    FOR(i,1,cnt2) if (q2[i].op==1) ST::update(1,1,n,q2[i].l,q2[i].r,-1);
+    FOR(i,1,cnt1) q[ql+i-1]=q1[i];
+    FOR(i,1,cnt2) q[ql+i-1+cnt1]=q2[i];
+    solve(l,mid,ql,ql+cnt1-1);
+    solve(mid+1,r,ql+cnt1,qr);
+}
+
+int main()
+{
+
+    while (scanf("%d%d", &n,&m)==2) {
+        tot=0;
+        FOR(i,1,m) {
+            int op,l,r;
+            LL x; scanf("%d%d%d%lld", &op,&l,&r,&x);
+            q[i]={l,r,x,0,op};
+            if (op==2) q[i].ind=++tot;
+        }
+        ST::build(1,1,n);
+        solve(-n,n,1,m);
+        FOR(i,1,tot) printf("%d\n", res[i]);
+    }
+
+    return 0;
+}
+\end{lstlisting}

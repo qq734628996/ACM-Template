@@ -1,0 +1,338 @@
+\section{数论}
+
+\subsection{素数筛}
+
+\begin{lstlisting}
+int vis[MAXN],prime[MAXN],tot;
+void getPrime(int n)
+{
+    FOR(i,2,n) {
+        if (!vis[i]) prime[tot++]=i;
+        REP(j,tot) {
+            if (i*prime[j]>n) break;
+            vis[i*prime[j]]=1;
+            if (i%prime[j]==0) break;
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{素性测试}
+
+test\_time 为测试次数,建议设为不小于 8 的整数以保证正确率,但也不宜过大,否则会影响效率
+
+\begin{lstlisting}
+bool millerRabbin(int n) {
+  if (n < 3) return n == 2;
+  int a = n - 1, b = 0;
+  while (a % 2 == 0) a /= 2, ++b;
+  for (int i = 1, j; i <= test_time; ++i) {
+    int x = rand() % (n - 2) + 2, v = quickPow(x, a, n);
+    if (v == 1 || v == n - 1) continue;
+    for (j = 0; j < b; ++j) {
+      v = (long long)v * v % n;
+      if (v == n - 1) break;
+    }
+    if (j >= b) return 0;
+  }
+  return 1;
+}
+\end{lstlisting}
+
+\subsection{反素数}
+
+如果某个正整数 $n$ 满足如下条件，则称为是反素数：任何小于 $n$ 的正数的约数个数都小于 $n$ 的约数个数
+
+https://blog.csdn.net/ACdreamers/article/details/25049767
+
+Number With The Given Amount Of Divisors CodeForces - 27E
+
+求约数个数为n的最小整数
+
+\begin{lstlisting}
+typedef unsigned long long ull;
+int p[16]={2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53};
+ull ans;
+int n;
+void dfs(int dep, ull now, int num, int up)
+{
+    if (num>n || dep>=16) return;
+    if (num==n && ans>now) {
+        ans=now;
+        return;
+    }
+    FOR(i,1,up) {
+        if (now/p[dep]>ans) break;
+        dfs(dep+1,now=now*p[dep],num*(i+1),i);
+    }
+}
+
+int main()
+{
+
+    while (scanf("%d", &n)==1) {
+        ans=~0ULL;
+        dfs(0,1,1,60);
+        printf("%llu\n", ans);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+More Divisors ZOJ - 2562
+
+求n以内因子数最多的数
+
+\begin{lstlisting}
+typedef unsigned long long ull;
+int p[16]={2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53};
+ull n,ans,ans_num;
+void dfs(int dep, ull now, int num, int up)
+{
+    if (dep>=16 || now>n) return;
+    if (num>ans_num || (num==ans_num && ans>now)) {
+        ans=now;
+        ans_num=num;
+    }
+    FOR(i,1,up) {
+        if (now*p[dep]>n) break;
+        dfs(dep+1,now*=p[dep],num*(i+1),i);
+    }
+}
+
+int main()
+{
+
+    while (scanf("%llu", &n)==1) {
+        ans_num=0;
+        dfs(0,1,1,60);
+        printf("%llu\n", ans);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+小明系列故事——未知剩余系 HDU - 4542
+
+给出一个数K和两个操作
+
+如果操作是0，就求出一个最小的正整数X，满足X的约数个数为K。
+
+如果操作是1，就求出一个最小的X，满足X的约数个数为X-K。
+
+https://blog.csdn.net/qq\_37025443/article/details/75007451
+
+上面的模板有错，以这个为准
+
+\begin{lstlisting}
+const LL inf=(1LL<<62)+1;
+int p[16]={2,3,5,7,11,13,17,19,23,29,31,37,41,43,47,53};
+LL ans;
+int op,n,d[MAXN];
+void init()
+{
+    int m=MAXN-5;
+    FOR(i,1,m) d[i]=i;
+    FOR(i,1,m) {
+        for (int j=i; j<=m; j+=i) d[j]--;
+        if (!d[d[i]]) d[d[i]]=i;
+        d[i]=0;
+    }
+}
+void dfs(int dep, LL now, int num, int up)
+{
+    if (num>n) return;
+    if (num==n && ans>now) { ans=now; return; }
+    FOR(i,1,up) {
+        if (ans/p[dep]<now || num*(i+1)>n) break;
+        now*=p[dep];
+        if (n%(num*(i+1))==0) dfs(dep+1,now,num*(i+1),i);
+    }
+}
+
+int main()
+{
+
+    init();
+    int T; scanf("%d", &T);
+    FOR(kase,1,T) {
+        scanf("%d%d", &op,&n);
+        if (op) ans=d[n];
+        else { ans=inf; dfs(0,1,1,62); }
+        printf("Case %d: ", kase);
+        if (!ans) puts("Illegal");
+        else if (ans>=inf) puts("INF");
+        else printf("%lld\n", ans);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+\subsection{欧几里得算法}
+
+\begin{lstlisting}
+//ax+by=d=gcd(a,b)
+LL gcd(LL a, LL b) { return b==0?a:gcd(b,a%b); }
+LL lcm(LL a, LL b) { return a/gcd(a,b)*b; }
+void ex_gcd(LL a, LL b, LL& d, LL& x, LL& y)
+{
+    if (!b) x=1, y=0, d=a;
+    else ex_gcd(b,a%b,d,y,x), y-=x*(a/b);
+}
+\end{lstlisting}
+
+\subsection{快速幂取模}
+
+\begin{lstlisting}
+LL powMod(LL x, LL e)
+{
+    if (!e) return 1;
+    return e&1 ? powMod(x,e-1)*x%MOD : powMod(x*x%MOD,e>>1);
+}
+LL powMod(LL x, LL e, LL p)
+{
+    if (!e) return 1;
+    return e&1 ? powMod(x,e-1,p)*x%p : powMod(x*x%p,e>>1,p);
+}
+\end{lstlisting}
+
+\subsection{欧拉函数}
+
+\begin{lstlisting}
+int vis[MAXN],prime[MAXN],phi[MAXN],tot;
+void getphi(int n)
+{
+    phi[1]=1;
+    FOR(i,2,n) {
+        if (!vis[i]) prime[tot++]=i, phi[i]=i-1;
+        REP(j,tot) {
+            if (i*prime[j]>n) break;
+            vis[i*prime[j]]=1;
+            if (i%prime[j]==0) {
+                phi[i*prime[j]]=phi[i]*prime[j];
+                break;
+            } else phi[i*prime[j]]=phi[i]*(prime[j]-1);
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{逆元}
+
+\begin{lstlisting}
+void ex_gcd(LL a, LL b, LL& d, LL& x, LL& y)
+{
+    if (!b) x=1, y=0, d=a;
+    else ex_gcd(b,a%b,d,y,x), y-=x*(a/b);
+}
+LL inv(LL a, LL p)
+{
+    LL d,x,y;
+    ex_gcd(a,p,d,x,y);
+    return d==1?(x+p)%p:-1;
+}
+LL inv(LL a) { return powMod(a,MOD-2); }
+\end{lstlisting}
+
+线性递推求乘法逆元
+
+\begin{lstlisting}
+int inv[MAXN];
+void getinv(int n, LL p)
+{
+    inv[1]=1;
+    FOR(i,2,n) inv[i]=(p-p/i)*inv[p%i]%p;
+}
+\end{lstlisting}
+
+阶乘逆元
+
+\begin{lstlisting}
+LL powMod(LL x, LL e)
+{
+    if (!e) return 1;
+    return e&1 ? powMod(x,e-1)*x%MOD : powMod(x*x%MOD,e>>1);
+}
+LL fac[MAXN],inv[MAXN];
+void getinv(int n)
+{
+    fac[0]=1;
+    FOR(i,1,n) fac[i]=fac[i-1]*i%MOD;
+    inv[0]=1;
+    inv[n]=powMod(fac[n],MOD-2);
+    ROF(i,1,n-1) inv[i]=inv[i+1]*(i+1)%MOD;
+}
+\end{lstlisting}
+
+\subsection{模方程}
+
+模板
+
+中国剩余定理，孙子定理
+
+//n个方程：x=a[i](mod m[i]) (0<=i<n)
+
+\begin{lstlisting}
+void ex_gcd(LL a, LL b, LL& d, LL& x, LL& y)
+{
+    if (!b) x=1, y=0, d=a;
+    else ex_gcd(b,a%b,d,y,x), y-=x*(a/b);
+}
+LL china(int n, int* a, int* m)
+{
+    LL M=1,d,y,x=0;
+    REP(i,n) M*=m[i];
+    REP(i,n) {
+        LL w=M/m[i];
+        ex_gcd(m[i],w,d,d,y);
+        x=(x+y*w*a[i])%M;
+    }
+    return (x+M)%M;
+}
+\end{lstlisting}
+
+离散对数
+
+又叫BSGS算法（Shank's Baby-Step-Giant-Step Algorithm，Shank的大步小步算法）
+
+//求解模方程a\^x=b(mod n)。n为素数，无解返回-1
+
+\begin{lstlisting}
+void ex_gcd(LL a, LL b, LL& d, LL& x, LL& y)
+{
+    if (!b) x=1, y=0, d=a;
+    else ex_gcd(b,a%b,d,y,x), y-=x*(a/b);
+}
+LL inv(LL a, LL p)
+{
+    LL d,x,y;
+    ex_gcd(a,p,d,x,y);
+    return d==-1?(x+p)%p:-1;
+}
+LL powMod(LL x, LL e, LL p)
+{
+    if (!e) return 1;
+    return e&1 ? powMod(x,e-1,p)*x%p : powMod(x*x%p,e>>1,p);
+}
+//a^x=b(mod n), n is prime
+int log_mod(int a, int b, int n)
+{
+    int m=sqrt(n+0.5);
+    int v=inv(powMod(a,m,n),n);
+    map<int,int> x;
+    x[1]=0;
+    int e=1;
+    for (int i=1; i<m; i++) {
+        e=e*a%n;
+        if (!x.count(e)) x[e]=i;
+    }
+    REP(i,m) {
+        if (x.count(b)) return i*m+x[b];
+        b=b*v%n;
+    }
+    return -1;
+}
+\end{lstlisting}

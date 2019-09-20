@@ -1,0 +1,114 @@
+\section{spfa}
+
+poj 2139 （acm题解里面）
+
+poj 3259
+
+spfa判负环，判断是否存在负环，加上vis数组判断是否遍历了图的所有结点
+
+spfa判正环，d数组初始化为0
+
+bfs版dfs已经够快，除非数据被针对，否则只能用dfs版spfa，一个简单而有效的改进是，所有结点进队次数大于T*(n+m)次以上即可判断负环，T根据实际情况一般取2，此算法牺牲了正确性，不过大多数情况下是正确的
+
+\begin{lstlisting}
+int T, n, m, w, d[MAXN], inq[MAXN], cnt[MAXN], kase, vis[MAXN];
+vector<pii> E[MAXN];
+
+bool spfa(int s)
+{
+    memset(d+1, 0x3f, sizeof(int) * n);
+    memset(cnt+1, 0, sizeof(int) * n);
+    queue<int> Q;
+    Q.push(s); inq[s] = kase; d[s] = 0; vis[s] = kase;
+    while (!Q.empty()) {
+        int u = Q.front(); Q.pop();
+        inq[u] = 0;
+        REP(i,SZ(E[u])) {
+            int v = E[u][i].fi, dist = E[u][i].se;
+            if (d[v] > d[u] + dist) {
+                d[v] = d[u] + dist;
+                if (inq[v] != kase) {
+                    vis[v] = kase;
+                    inq[v] = kase;
+                    Q.push(v);
+                    if (++cnt[v] > n) return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+int main()
+{
+
+    scanf("%d", &T);
+    for (kase = 1; kase <= T; kase++) {
+        scanf("%d%d%d", &n, &m, &w);
+        FOR(i,1,n) E[i].clear();
+        REP(i,m) {
+            int x, y, z; scanf("%d%d%d", &x, &y, &z);
+            E[x].pb(pii(y,z)); E[y].pb(pii(x,z));
+        }
+        REP(i,w) {
+            int x, y, z; scanf("%d%d%d", &x, &y, &z);
+            E[x].pb(pii(y,-z));
+        }
+        bool ans = true;
+        FOR(i,1,n) if (vis[i] != kase) ans &= spfa(i);
+        puts(ans ? "NO" : "YES");
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+POJ - 2240
+
+判正环，spfa\_dfs版875ms，可能是边的存储慢了，或者数据被针对？或者dfs版写错了？还是输入或者map的问题？
+
+\begin{lstlisting}
+int n, m, vis[MAXN], ins[MAXN], kase;
+double E[MAXN][MAXN], d[MAXN];
+map<string, int> mp;
+
+bool spfa_dfs(int u)
+{
+    vis[u] = ins[u] = kase;
+    FOR(v,1,n) if (d[v] < d[u]*E[u][v]) {
+        d[v] = d[u]*E[u][v];
+        if (ins[v] == kase || spfa_dfs(v)) return true;
+    }
+    ins[u] = 0;
+    return false;
+}
+
+int main()
+{
+
+    while (scanf("%d", &n), n) {
+        printf("Case %d: ", ++kase);
+        mp.clear();
+        FOR(i,1,n) {
+            string s; cin >> s;
+            mp[s] = i;
+        }
+        scanf("%d", &m);
+        memset(E, 0, sizeof(E));
+        FOR(i,1,m) {
+            string s, t; double r; cin >> s >> r >> t;
+            E[mp[s]][mp[t]] = r;
+        }
+        bool ok = false;
+        FOR(i,1,n) if (vis[i] != kase) {
+            FOR(i,1,n) d[i] = 0;
+            d[i] = 1;
+            ok |= spfa_dfs(i);
+            if (ok) break;
+        }
+        puts(ok ? "Yes" : "No");
+    }
+
+    return 0;
+}
+\end{lstlisting}

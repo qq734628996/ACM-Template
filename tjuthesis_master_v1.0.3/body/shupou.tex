@@ -1,0 +1,496 @@
+\section{树链剖分}
+
+
+Query on a tree SPOJ - QTREE
+
+树链剖分 边权 单点修改 区间最值
+
+给的是边权，可以通过下放边权到深度较深的那个结点解决，树剖查询的时候，如果top结点相同，查询时不查祖先那个点，如果只有祖先一个点，直接返回
+
+要保存每条边的两个结点，然后通过深度判断第i条边的边权是下放到哪个结点去了
+
+\begin{lstlisting}
+int n,a[MAXN],val[MAXN];
+#define ls x<<1
+#define rs x<<1|1
+#define mid (l+r)/2
+struct node {
+    int ma;
+} T[MAXN<<2];
+void up(int x) {
+    T[x].ma=max(T[ls].ma,T[rs].ma);
+}
+void build(int x, int l, int r) {
+    T[x]={a[l]};
+    if (l<r) {
+        build(ls,l,mid);
+        build(rs,mid+1,r);
+        up(x);
+    }
+}
+void update(int x, int l, int r, int p, int val) {
+    if (l==r) T[x]={val};
+    else {
+        if (p<=mid) update(ls,l,mid,p,val);
+        else update(rs,mid+1,r,p,val);
+        up(x);
+    }
+}
+int query_max(int x, int l, int r, int ql, int qr) {
+    if (ql<=l && r<=qr) return T[x].ma;
+    else {
+        int ans=-INF;
+        if (ql<=mid) ans=max(ans,query_max(ls,l,mid,ql,qr));
+        if (mid<qr) ans=max(ans,query_max(rs,mid+1,r,ql,qr));
+        return ans;
+    }
+}
+struct edge {
+    int to,nxt,w;
+} e[MAXM];
+int tot,f[MAXN],uu[MAXN],vv[MAXN];
+void add(int u, int v, int w) {
+    e[tot]={v,f[u],w}; f[u]=tot++;
+}
+int sz[MAXN],fa[MAXN],d[MAXN],son[MAXN],top[MAXN],clk,in[MAXN];
+void dfs(int u) {
+    sz[u]=1; d[u]=d[fa[u]]+1; son[u]=0;
+    for (int i=f[u]; ~i; i=e[i].nxt) {
+        int v=e[i].to;
+        if (v!=fa[u]) {
+            fa[v]=u; val[v]=e[i].w; dfs(v);
+            sz[u]+=sz[v];
+            if (sz[v]>sz[son[u]]) son[u]=v;
+        }
+    }
+}
+void dfs(int u, int tp) {
+    a[++clk]=val[u]; in[u]=clk;
+    top[u]=tp;
+    if (son[u]) dfs(son[u],tp);
+    for (int i=f[u]; ~i; i=e[i].nxt) {
+        int v=e[i].to;
+        if (v!=fa[u] && v!=son[u]) dfs(v,v);
+    }
+}
+int tree_max(int x, int y) {
+    int ans=-INF;
+    while (top[x]!=top[y]) {
+        if (d[top[x]]<d[top[y]]) swap(x,y);
+        ans=max(ans,query_max(1,1,n,in[top[x]],in[x]));
+        x=fa[top[x]];
+    }
+    if (x==y) return ans;
+    if (in[x]>in[y]) swap(x,y);
+    ans=max(ans,query_max(1,1,n,in[x]+1,in[y]));
+    return ans;
+}
+void init() {
+    tot=fa[1]=clk=0;
+    memset(f,-1,sizeof(f));
+    val[1]=-INF;
+}
+
+int main()
+{
+
+    int kase; scanf("%d", &kase);
+    while (kase--) {
+        init();
+        scanf("%d", &n);
+        FOR(i,1,n-1) {
+            int z;
+            scanf("%d%d%d", &uu[i],&vv[i],&z);
+            add(uu[i],vv[i],z);
+            add(vv[i],uu[i],z);
+        }
+        dfs(1);
+        dfs(1,1);
+        build(1,1,n);
+        FOR(i,1,n-1) {
+            if (d[uu[i]]>d[vv[i]]) swap(uu[i],vv[i]);
+        }
+        char op[11];
+        while (scanf("%s", op), op[0]!='D') {
+            int x,y; scanf("%d%d", &x,&y);
+            if (op[0]=='C') update(1,1,n,in[vv[x]],y);
+            else printf("%d\n", tree_max(x,y));
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+P3379 【模板】最近公共祖先（LCA）
+
+\begin{lstlisting}
+int to[MAXM],nxt[MAXM],f[MAXN],tot;
+void init() {
+    tot=0;
+    memset(f,-1,sizeof(f));
+}
+void add(int u, int v) {
+    to[tot]=v;
+    nxt[tot]=f[u];
+    f[u]=tot++;
+}
+int n,q,root;
+int sz[MAXN],d[MAXN],fa[MAXN],son[MAXN],top[MAXN];
+void init1() {
+    d[0]=0;
+    fa[root]=0; //start at 0
+    memset(son,0,sizeof(son));
+}
+void dfs(int u) {
+    sz[u]=1; d[u]=d[fa[u]]+1;
+    for (int i=f[u]; ~i; i=nxt[i]) {
+        int v=to[i];
+        if (v==fa[u]) continue;
+        fa[v]=u; dfs(v);
+        sz[u]+=sz[v];
+        if (!son[u]||sz[v]>sz[son[u]]) son[u]=v;
+    }
+}
+void dfs(int u, int tp) {
+    top[u]=tp;
+    if (son[u]) dfs(son[u],tp);
+    for (int i=f[u]; ~i; i=nxt[i]) {
+        int v=to[i];
+        if (v==son[u]||v==fa[u]) continue;
+        dfs(v,v);
+    }
+}
+int LCA(int x, int y) {
+    while (top[x]!=top[y]) d[top[x]]>=d[top[y]]?x=fa[top[x]]:y=fa[top[y]];
+    return d[x]>=d[y]?y:x;
+}
+
+int main()
+{
+
+    while (scanf("%d%d%d", &n,&q,&root)==3) {
+        init();
+        REP(i,n-1) {
+            int x,y; scanf("%d%d", &x,&y);
+            add(x,y); add(y,x);
+        }
+        init1();
+        dfs(root);
+        dfs(root,root);
+        while (q--) {
+            int x,y; scanf("%d%d", &x,&y);
+            printf("%d\n", LCA(x,y));
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+P3384 【模板】树链剖分
+
+支持以下操作：
+
+操作1： 格式： 1 x y z 表示将树从x到y结点最短路径上所有节点的值都加上z
+
+操作2： 格式： 2 x y 表示求树从x到y结点最短路径上所有节点的值之和
+
+操作3： 格式： 3 x z 表示将以x为根节点的子树内所有节点值都加上z
+
+操作4： 格式： 4 x 表示求以x为根节点的子树内所有节点值之和
+
+树链剖分可以把树上两个结点之间的路径转化为O(logn)个区间，方法是：第二遍dfs的时候维护dfs序，
+
+\begin{lstlisting}
+int n,q,root,p;
+LL a[MAXN],val[MAXN];
+#define ls x<<1
+#define rs x<<1|1
+#define mid (l+r)/2
+struct node {
+    int l,r;
+    LL sum,add;
+    void update(LL x) {
+        sum+=x*(r-l+1); sum%=p;
+        add+=x; add%=p;
+    }
+} T[MAXN<<2];
+void up(int x) {
+    T[x].sum=(T[ls].sum+T[rs].sum)%p;
+}
+void down(int x) {
+    if (T[x].add) {
+        T[ls].update(T[x].add);
+        T[rs].update(T[x].add);
+        T[x].add=0;
+    }
+}
+void build(int x, int l, int r) {
+    T[x]={l,r,0,0};
+    if (l==r) T[x].sum=a[l];
+    else {
+        build(ls,l,mid);
+        build(rs,mid+1,r);
+        up(x);
+    }
+}
+void update(int x, int l, int r, int ql, int qr, LL val) {
+    if (ql<=l && r<=qr) T[x].update(val);
+    else {
+        down(x);
+        if (ql<=mid) update(ls,l,mid,ql,qr,val);
+        if (mid<qr) update(rs,mid+1,r,ql,qr,val);
+        up(x);
+    }
+}
+LL query(int x, int l, int r, int ql, int qr) {
+    if (ql<=l && r<=qr) return T[x].sum;
+    else {
+        LL ans=0;
+        down(x);
+        if (ql<=mid) ans+=query(ls,l,mid,ql,qr);
+        if (mid<qr) ans+=query(rs,mid+1,r,ql,qr);
+        up(x);
+        return ans%p;
+    }
+}
+struct edge {
+    int to,nxt;
+} e[MAXN<<1];
+int tot,f[MAXN];
+void add(int u, int v) {
+    e[tot]={v,f[u]}; f[u]=tot++;
+}
+int sz[MAXN],d[MAXN],fa[MAXN],son[MAXN],top[MAXN],clk,in[MAXN];
+void dfs(int u) {
+    sz[u]=1; d[u]=d[fa[u]]+1; son[u]=0;
+    for (int i=f[u]; ~i; i=e[i].nxt) {
+        int v=e[i].to;
+        if (v!=fa[u]) {
+            fa[v]=u; dfs(v);
+            sz[u]+=sz[v];
+            if (sz[v]>sz[son[u]]) son[u]=v;
+        }
+    }
+}
+void dfs(int u, int tp) {
+    a[++clk]=val[u]; in[u]=clk;
+    top[u]=tp;
+    if (son[u]) dfs(son[u],tp);
+    for (int i=f[u]; ~i; i=e[i].nxt) {
+        int v=e[i].to;
+        if (v!=fa[u] && v!=son[u]) dfs(v,v);
+    }
+}
+void tree_add(int x, int y, LL val) {
+    while (top[x]!=top[y]) {
+        if (d[top[x]]<d[top[y]]) swap(x,y);
+        update(1,1,n,in[top[x]],in[x],val);
+        x=fa[top[x]];
+    }
+    if (in[x]>in[y]) swap(x,y);
+    update(1,1,n,in[x],in[y],val);
+}
+LL tree_sum(int x, int y) {
+    LL ans=0;
+    while (top[x]!=top[y]) {
+        if (d[top[x]]<d[top[y]]) swap(x,y);
+        ans+=query(1,1,n,in[top[x]],in[x]);
+        x=fa[top[x]];
+    }
+    if (in[x]>in[y]) swap(x,y);
+    ans+=query(1,1,n,in[x],in[y]);
+    return ans%p;
+}
+void init() {
+    tot=clk=fa[root]=0;
+    memset(f,-1,sizeof(f));
+}
+
+int main()
+{
+
+    while (scanf("%d%d%d%d", &n,&q,&root,&p)==4) {
+        init();
+        FOR(i,1,n) scanf("%lld", &val[i]), val[i]%=p;
+        REP(i,n-1) {
+            int x,y; scanf("%d%d", &x,&y);
+            add(x,y); add(y,x);
+        }
+        dfs(root);
+        dfs(root,root);
+        build(1,1,n);
+        while (q--) {
+            int op,x,y; LL z; scanf("%d", &op);
+            switch (op) {
+                case 1:
+                    scanf("%d%d%lld", &x,&y,&z);
+                    tree_add(x,y,z%p);
+                    break;
+                case 2:
+                    scanf("%d%d", &x,&y);
+                    printf("%lld\n", tree_sum(x,y));
+                    break;
+                case 3:
+                    scanf("%d%lld", &x,&z);
+                    update(1,1,n,in[x],in[x]+sz[x]-1,z%p);
+                    break;
+                case 4:
+                    scanf("%d", &x);
+                    printf("%lld\n", query(1,1,n,in[x],in[x]+sz[x]-1));
+                    break;
+            }
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+P2486 [SDOI2011]染色
+
+两种操作：1.将两结点之间路径染色。2.询问两结点之间路径连续颜色段数。
+
+首先考虑区间染色问题，需要支持区间修改，即要下推标记；需要区间合并，则线段树需要维护左端点颜色和右端点颜色以及连续颜色段数，合并时需要检查两区间中间颜色是否相同。
+
+其次考虑树上的区间合并，树链剖分思想是两个结点往上跳，所以开两个维护答案，最后合并答案，需要考虑区间的反转，具体可以手推一下就出来了。
+
+\begin{lstlisting}
+int n,q,a[MAXN],val[MAXN];
+#define ls x<<1
+#define rs x<<1|1
+#define mid (l+r)/2
+struct node {
+    int lc,rc,cnt,lazy;
+    void update(int val) {
+        lc=rc=lazy=val;
+        cnt=1;
+    }
+} T[MAXN<<2];
+node cal(node a, node b) {
+    return {a.lc,b.rc,a.cnt+b.cnt-(a.rc==b.lc),0};
+}
+void up(int x) {
+    T[x]=cal(T[ls],T[rs]);
+}
+void down(int x) {
+    if (T[x].lazy) {
+        T[ls].update(T[x].lazy);
+        T[rs].update(T[x].lazy);
+        T[x].lazy=0;
+    }
+}
+void build(int x, int l, int r) {
+    if (l==r) T[x]={a[l],a[l],1,0};
+    else {
+        build(ls,l,mid);
+        build(rs,mid+1,r);
+        up(x);
+    }
+}
+void update(int x, int l, int r, int ql, int qr, int val) {
+    if (ql<=l && r<=qr) T[x].update(val);
+    else {
+        down(x);
+        if (ql<=mid) update(ls,l,mid,ql,qr,val);
+        if (mid<qr) update(rs,mid+1,r,ql,qr,val);
+        up(x);
+    }
+}
+node query(int x, int l, int r, int ql, int qr) {
+    if (ql<=l && r<=qr) return T[x];
+    else {
+        node ans;
+        down(x);
+        if (ql<=mid && mid<qr) {
+            node a=query(ls,l,mid,ql,qr);
+            node b=query(rs,mid+1,r,ql,qr);
+            ans=cal(a,b);
+        } else {
+            if (ql<=mid) ans=query(ls,l,mid,ql,qr);
+            else ans=query(rs,mid+1,r,ql,qr);
+        }
+        up(x);
+        return ans;
+    }
+}
+struct edge {
+    int to,nxt;
+} e[MAXM];
+int f[MAXN],tot;
+void add(int u, int v) {
+    e[tot]={v,f[u]}; f[u]=tot++;
+}
+int sz[MAXN],fa[MAXN],d[MAXN],son[MAXN],top[MAXN],clk,in[MAXN];
+void dfs(int u) {
+    sz[u]=1; d[u]=d[fa[u]]+1; son[u]=0;
+    for (int i=f[u]; ~i; i=e[i].nxt) {
+        int v=e[i].to;
+        if (v!=fa[u]) {
+            fa[v]=u; dfs(v);
+            sz[u]+=sz[v];
+            if (sz[v]>sz[son[u]]) son[u]=v;
+        }
+    }
+}
+void dfs(int u, int tp) {
+    a[++clk]=val[u]; in[u]=clk;
+    top[u]=tp;
+    if (son[u]) dfs(son[u],tp);
+    for (int i=f[u]; ~i; i=e[i].nxt) {
+        int v=e[i].to;
+        if (v!=fa[u] && v!=son[u]) dfs(v,v);
+    }
+}
+void tree_update(int x, int y, int val) {
+    while (top[x]!=top[y]) {
+        if (d[top[x]]<d[top[y]]) swap(x,y);
+        update(1,1,n,in[top[x]],in[x],val);
+        x=fa[top[x]];
+    }
+    if (in[x]>in[y]) swap(x,y);
+    update(1,1,n,in[x],in[y],val);
+}
+int tree_query(int x, int y) {
+    node a{0,0,0}, b{0,0,0};
+    while (top[x]!=top[y]) {
+        if (d[top[x]]<d[top[y]]) swap(x,y), swap(a,b);
+        if (a.cnt) a=cal(query(1,1,n,in[top[x]],in[x]),a);
+        else a=query(1,1,n,in[top[x]],in[x]);
+        x=fa[top[x]];
+    }
+    if (in[x]>in[y]) swap(x,y), swap(a,b);
+    if (b.cnt) b=cal(query(1,1,n,in[x],in[y]),b);
+    else b=query(1,1,n,in[x],in[y]);
+    swap(a.lc,a.rc);
+    return cal(a,b).cnt;
+}
+void init() {
+    tot=fa[1]=clk=0;
+    memset(f,-1,sizeof(f));
+}
+
+int main()
+{
+
+    while (scanf("%d%d", &n,&q)==2) {
+        init();
+        FOR(i,1,n) scanf("%d", &val[i]);
+        REP(i,n-1) {
+            int x,y; scanf("%d%d", &x,&y);
+            add(x,y); add(y,x);
+        }
+        dfs(1);
+        dfs(1,1);
+        build(1,1,n);
+        while (q--) {
+            char op[2]; int x,y,z; scanf("%s%d%d", op,&x,&y);
+            if (op[0]=='Q') printf("%d\n", tree_query(x,y));
+            else scanf("%d", &z), tree_update(x,y,z);
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}

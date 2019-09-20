@@ -1,0 +1,173 @@
+\section{矩阵}
+
+例题 22 递推关系 Recurrences UVA - 10870
+
+矩阵 递推式 友矩阵(companion matrix) 经典 模板
+
+\begin{lstlisting}
+const int maxn=16;
+int n,x,mo,a[22],f[22];
+struct mat {
+    LL a[maxn][maxn];
+    mat(LL x=0){ memset(a,0,sizeof(a)); REP(i,n) a[i][i]=x; }
+    mat operator*(const mat& T) const {
+        mat res;
+        REP(i,n)REP(k,n) {
+            LL r=a[i][k];
+            REP(j,n) res.a[i][j]+=r*T.a[k][j];
+        }
+        REP(i,n)REP(j,n) res.a[i][j]%=mo;
+        return res;
+    }
+    mat operator^(LL x) const {
+        mat res(1), bas{*this};
+        for (; x; x>>=1) {
+            if (x&1) res=res*bas;
+            bas=bas*bas;
+        }
+        return res;
+    }
+    void print(){
+        REP(i,n){
+            REP(j,n) printf("%lld\t", a[i][j]);
+            puts("");
+        }
+        puts("");
+    }
+};
+
+int main()
+{
+
+    while (scanf("%d%d%d", &n,&x,&mo)==3) {
+        if (n==0 && x==0 && mo==0) break;
+        REP(i,n) scanf("%d", &a[i]), a[i]%=mo;
+        REP(i,n) scanf("%d", &f[i]), f[i]%=mo;
+        if (x<=n) { printf("%d\n", f[x-1]); continue; }
+        mat M;
+        REP(i,n-1) M.a[i][i+1]=1;
+        REP(j,n) M.a[n-1][j]=a[n-1-j];
+        M=M^(x-n);
+        LL ans=0;
+        REP(j,n) ans+=M.a[n-1][j]*f[j];
+        printf("%lld\n", ans%mo);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+例题 23 细胞自动机 Cellular Automaton, NEERC 2006, UVALive - 3704
+
+矩阵 循环矩阵模板
+
+分析见白书。循环矩阵的性质使得循环矩阵复杂度可降为O(n\^2lgk)
+
+\begin{lstlisting}
+int n,m,d,k,a[555];
+struct mat {
+    static const int maxn=505;
+    LL a[maxn];
+    LL& operator()(int i, int j) { return a[(j-i+n)%n]; }
+    mat(LL x=0){ memset(a,0,sizeof(a)); a[0]=x; }
+    mat operator*(mat& T) {
+        mat res;
+        REP(i,1)REP(k,n) {
+            LL r=(*this)(i,k);
+            REP(j,n) res(i,j)+=r*T(k,j);
+        }
+        REP(i,1)REP(j,n) res(i,j)%=m;
+        return res;
+    }
+    mat operator^(LL x) const {
+        mat res(1), bas{*this};
+        for (; x; x>>=1) {
+            if (x&1) res=res*bas;
+            bas=bas*bas;
+        }
+        return res;
+    }
+    void print() {
+        REP(i,n) printf("%lld ", a[i]);
+        puts("");
+    }
+};
+
+int main()
+{
+
+    while (scanf("%d%d%d%d", &n,&m,&d,&k)==4) {
+        REP(i,n) scanf("%d", &a[i]);
+        mat M(1);
+        REP(i,d) M.a[1+i]=M.a[n-1-i]=1;
+        M=M^k;
+        REP(j,n) {
+            LL ans=0;
+            REP(i,n) ans+=M(i,j)*a[i];
+            printf("%lld%c", ans%m,j==n-1?'\n':' ');
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+例题 24 随机程序 Back to Kernighan-Ritchie UVA - 10828
+
+线性方程组 高斯消元 高斯-约当消元 模板
+
+含无穷解和0解，当A[i][i]=A[i][n]=0时，x[i]=0，当A[i][i]=0时，x[i]为正无穷
+
+\begin{lstlisting}
+typedef double Matrix[MAXN][MAXN];
+void gauss_jordan(Matrix A, int n)
+{
+    REP(i,n) {
+        int r=i;
+        FOR(j,i+1,n-1) if (fabs(A[j][i])>fabs(A[r][i])) r=j;
+        if (fabs(A[r][i])<eps) continue;
+        if (r!=i) FOR(j,0,n) swap(A[r][j], A[i][j]);
+        REP(k,n) if (k!=i) ROF(j,i,n) A[k][j]-=A[k][i]/A[i][i]*A[i][j];
+    }
+}
+Matrix A;
+int n,d[MAXN],kase;
+vector<int> pre[MAXN];
+int inf[MAXN];
+
+int main()
+{
+
+    while (scanf("%d", &n)==1 && n) {
+        memset(d,0,sizeof(d));
+        REP(i,n) pre[i].clear();
+        int a,b;
+        while (scanf("%d%d", &a,&b)==2 && a) {
+            a--, b--;
+            d[a]++;
+            pre[b].pb(a);
+        }
+        memset(A,0,sizeof(A));
+        REP(i,n) {
+            A[i][i]=1;
+            REP(j,SZ(pre[i])) A[i][pre[i][j]]-=1.0/d[pre[i][j]];
+            if (i==0) A[i][n]=1;
+        }
+        gauss_jordan(A,n);
+        memset(inf,0,sizeof(inf));
+        PER(i,n) {
+            if (fabs(A[i][i])<eps && fabs(A[i][n])>eps) inf[i]=1;
+            FOR(j,i+1,n-1) if (fabs(A[i][j])>eps && inf[j]) inf[i]=1;
+        }
+        int q; scanf("%d", &q);
+        printf("Case #%d:\n", ++kase);
+        while (q--) {
+            int u; scanf("%d", &u); u--;
+            if (inf[u]) puts("infinity");
+            else printf("%.3f\n", fabs(A[u][u])<eps ? 0 : A[u][n]/A[u][u]);
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}

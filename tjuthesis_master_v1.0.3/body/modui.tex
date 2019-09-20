@@ -1,0 +1,372 @@
+\section{莫队}
+
+P1494 [国家集训队]小Z的袜子
+
+普通莫队最终模板
+
+询问区间随机取两个数相同的概率是多少，输出最简分数
+
+组合数C(n+1,2)-C(n,2)=n，然后就很简单了，注意L==R的时候要特判，这时候分子分母都是0，gcd为0，除0会RE
+
+\begin{lstlisting}
+int n,m,a[MAXN];
+struct query {
+    int l,r,ind;
+} q[MAXN];
+int bsz,belong[MAXN],cnt[MAXN];
+LL tot,ansa,ansb,resa[MAXN],resb[MAXN];
+bool cmp(query& a, query& b) {
+    if (belong[a.l]!=belong[b.l]) return belong[a.l]<belong[b.l];
+    return (belong[a.l]&1)?(a.r>b.r):(a.r<b.r);
+}
+void prelude() {
+    bsz=sqrt(n);
+    FOR(i,1,n) belong[i]=i/bsz;
+    sort(q+1,q+1+m,cmp);
+}
+void add(int x) {
+    ansa+=cnt[x];
+    cnt[x]++;
+    ansb+=tot;
+    tot++;
+}
+void del(int x) {
+    tot--;
+    ansb-=tot;
+    cnt[x]--;
+    ansa-=cnt[x];
+}
+LL gcd(LL a, LL b){ return b==0?a:gcd(b,a%b); }
+void mt() {
+    int l=1,r=0;
+    ansa=ansb=tot=0;
+    memset(cnt,0,sizeof(cnt));
+    FOR(i,1,m) {
+        int ql=q[i].l, qr=q[i].r, ind=q[i].ind;
+        while (l<ql) del(a[l++]);
+        while (l>ql) add(a[--l]);
+        while (r<qr) add(a[++r]);
+        while (r>qr) del(a[r--]);
+        LL g=gcd(ansa,ansb);
+        if (!g) {
+            resa[ind]=0;
+            resb[ind]=1;
+            continue;
+        }
+        resa[ind]=ansa/g;
+        resb[ind]=ansb/g;
+    }
+}
+
+int main()
+{
+
+    while (scanf("%d%d", &n,&m)==2) {
+        FOR(i,1,n) scanf("%d", &a[i]);
+        FOR(i,1,m) {
+            int l,r; scanf("%d%d", &l,&r);
+            q[i]={l,r,i};
+        }
+        prelude();
+        mt();
+        FOR(i,1,m) printf("%lld/%lld\n", resa[i],resb[i]);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+https://www.cnblogs.com/WAMonster/p/10118934.html
+
+P1903 [国家集训队]数颜色 / 维护队列
+
+带修改询问区间不同数个数 带修莫队 模板
+
+被卡常了只能用O2
+
+\begin{lstlisting}
+int n,q,a[MAXN],belong[MAXN],res[MAXN];
+int bsz,cntq,cntm;
+struct query {
+    int l,r,t,ind;
+} b[MAXN];
+bool cmp(query& a, query& b) {
+    if (belong[a.l]!=belong[b.l]) return belong[a.l]<belong[b.l];
+    if (belong[a.r]!=belong[b.r]) return belong[a.r]<belong[b.r];
+    return a.t<b.t;
+}
+struct modify {
+    int pos,color;
+} c[MAXN];
+int ans,cnt[MAXM];
+inline void add(int p) {
+    if (cnt[a[p]]++==0) ans++;
+}
+inline void del(int p) {
+    if (--cnt[a[p]]==0) ans--;
+}
+inline void update(int t, int ql, int qr) {
+    int p=c[t].pos;
+    if (ql<=p && p<=qr) {
+        if (--cnt[a[p]]==0) ans--;
+        if (cnt[c[t].color]++==0) ans++;
+    }
+    swap(a[p],c[t].color);
+}
+
+int main()
+{
+
+    scanf("%d%d", &n,&q);
+    bsz=pow(n,2.0/3);
+    FOR(i,1,n) {
+        scanf("%d", &a[i]);
+        belong[i]=i/bsz;
+    }
+    cntq=cntm=0;
+    FOR(i,1,q) {
+        char op[2]; scanf("%s", op);
+        if (op[0]=='Q') {
+            int l,r; scanf("%d%d", &l,&r);
+            if (l>r) swap(l,r);
+            cntq++;
+            b[cntq]={l,r,cntm,cntq};
+        } else {
+            int p,x; scanf("%d%d", &p,&x);
+            c[++cntm]={p,x};
+        }
+    }
+    sort(b+1,b+1+cntq,cmp);
+    int l=1, r=0, t=0;
+    ans=0;
+    memset(cnt,0,sizeof(cnt));
+    FOR(i,1,cntq) {
+        int ql=b[i].l, qr=b[i].r, qt=b[i].t, ind=b[i].ind;
+        while (l<ql) del(l++);
+        while (l>ql) add(--l);
+        while (r<qr) add(++r);
+        while (r>qr) del(r--);
+        while (t<qt) update(++t,ql,qr);
+        while (t>qt) update(t--,ql,qr);
+        res[ind]=ans;
+    }
+    FOR(i,1,cntq) {
+        printf("%d\n", res[i]);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+SP10707 COT2 - Count on a tree II
+
+树上莫队 模板 树上两个结点路径不同结点权值个数
+
+树上两结点路径转区间方法：先生成欧拉序——dfs时候进入是记录一下时间戳，出来的时候记录一下时间戳，并按时间戳顺序记录结点编号，共2*n长度的序列。对于结点u,v，如果in[u]>in[v]，交换u和v；如果lca(u,v)==u，直接询问欧拉序的区间[in(u),out(v)]；否则，询问区间(out(u),in(v))，并且加上一个点lca(u,v)int to[MAXN],nxt[MAXN],f[MAXN],tot;
+
+\begin{lstlisting}
+void add(int u, int v) {
+    to[tot]=v;
+    nxt[tot]=f[u];
+    f[u]=tot++;
+}
+int n,m,a[MAXN];
+int sz[MAXN],d[MAXN],fa[MAXN],son[MAXN],top[MAXN];
+int b[MAXN],L[MAXN],R[MAXN],clk;
+void prelude() {
+    int cnt=0;
+    unordered_map<int,int> mp;
+    FOR(i,1,n) {
+        if (!mp.count(a[i])) mp[a[i]]=++cnt;
+    }
+    FOR(i,1,n) a[i]=mp[a[i]];
+}
+void dfs(int u) {
+    b[++clk]=u;
+    L[u]=clk;
+    sz[u]=1; d[u]=d[fa[u]]+1; son[u]=0;
+    for (int i=f[u]; ~i; i=nxt[i]) {
+        int v=to[i];
+        if (v!=fa[u]) {
+            fa[v]=u; dfs(v);
+            sz[u]+=sz[v];
+            if (sz[v]>sz[son[u]]) son[u]=v;
+        }
+    }
+    b[++clk]=u;
+    R[u]=clk;
+}
+void dfs(int u, int tp) {
+    top[u]=tp;
+    if (son[u]) dfs(son[u],tp);
+    for (int i=f[u]; ~i; i=nxt[i]) {
+        int v=to[i];
+        if (v!=son[u] && v!=fa[u]) dfs(v,v);
+    }
+}
+int LCA(int x, int y) {
+    while (top[x]!=top[y]) d[top[x]]>=d[top[y]]?x=fa[top[x]]:y=fa[top[y]];
+    return d[x]>=d[y]?y:x;
+}
+void init() {
+    tot=d[0]=fa[1]=clk=0;
+    memset(f,-1,sizeof(f));
+}
+int belong[MAXN],res[MAXN],cnt[MAXN],vcnt[MAXN],bsz,ans;
+struct query {
+    int l,r,lca,ind;
+} q[MAXN];
+bool cmp(query& a, query& b) {
+    if (belong[a.l]!=belong[b.l]) return belong[a.l]<belong[b.l];
+    return (belong[a.l]&1)?(a.r>b.r):(a.r<b.r);
+}
+void add(int u) {
+    if (cnt[u]++==0) {
+        if (vcnt[a[u]]++==0) ans++;
+    } else {
+        if (--vcnt[a[u]]==0) ans--;
+    }
+}
+void del(int u) {
+    if (--cnt[u]==0) {
+        if (--vcnt[a[u]]==0) ans--;
+    } else {
+        if (vcnt[a[u]]++==0) ans++;
+    }
+}
+
+int main()
+{
+
+    while (scanf("%d%d", &n,&m)==2) {
+        init();
+        FOR(i,1,n) scanf("%d", &a[i]);
+        REP(i,n-1) {
+            int u,v; scanf("%d%d", &u,&v);
+            add(u,v);
+            add(v,u);
+        }
+        prelude();
+        dfs(1);
+        dfs(1,1);
+        FOR(i,1,m) {
+            int u,v; scanf("%d%d", &u,&v);
+            if (L[u]>L[v]) swap(u,v);
+            int lca=LCA(u,v);
+            if (lca==u) q[i]={L[u],L[v],0,i};
+            else q[i]={R[u],L[v],lca,i};
+        }
+        bsz=sqrt(2*n);
+        FOR(i,1,2*n) belong[i]=i/bsz;
+        sort(q+1,q+1+m,cmp);
+        int l=1,r=0;
+        ans=0;
+        memset(cnt,0,sizeof(cnt));
+        memset(vcnt,0,sizeof(vcnt));
+        FOR(i,1,m) {
+            int ql=q[i].l, qr=q[i].r, lca=q[i].lca, ind=q[i].ind;
+            while (l<ql) del(b[l++]);
+            while (l>ql) add(b[--l]);
+            while (r<qr) add(b[++r]);
+            while (r>qr) del(b[r--]);
+            if (lca) add(lca);
+            res[ind]=ans;
+            if (lca) del(lca);
+        }
+        FOR(i,1,m) {
+            printf("%d\n", res[i]);
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+AT1219 歴史の研究
+
+回滚莫队 模板
+
+询问区间max(某数x乘上该数的出现次数)
+
+对于添加操作容易实现，但删除操作不太可能，可以使用回滚莫队。
+
+区别普通莫队：1.需要维护多一个块区间的最右端点br数组；2.记录上一个块的bid，每次遍历到一个新的块，把cnt数组清空（这里复杂度O(n)，共需清空sqrt(n)次），把左右指针指向当前块的最右端。3.如果右指针小于当前块最右端，添加元素，保存这时的答案（后面要恢复用），枚举左边部分的元素，逐个添加（注意右端点位置），更新答案，然后逐个删除，复原答案。@int n,m,a[MAXN]
+
+\begin{lstlisting}
+vector<LL> val;
+struct query {
+    int l,r,ind;
+} q[MAXN];
+int bsz,cnt[MAXN],belong[MAXN],br[MAXN];
+LL ans,res[MAXN];
+void prelude() {
+    val.clear();
+    unordered_map<int,int> mp;
+    FOR(i,1,n) {
+        if (!mp.count(a[i])) {
+            val.pb(a[i]);
+            mp[a[i]]=SZ(val)-1;
+        }
+        a[i]=mp[a[i]];
+    }
+    bsz=sqrt(n);
+    FOR(i,1,n) {
+        belong[i]=i/bsz;
+        br[i/bsz]=i;
+    }
+}
+bool cmp(query& a, query& b) {
+    if (belong[a.l]!=belong[b.l]) return belong[a.l]<belong[b.l];
+    return a.r<b.r;
+}
+void add(int x) {
+    cnt[x]++;
+    ans=max(ans,cnt[x]*val[x]);
+}
+void del(int x) {
+    cnt[x]--;
+}
+void mt() {
+    sort(q+1,q+1+m,cmp);
+    int pre=-1;
+    ans=0;
+    int l,r;
+    FOR(i,1,m) {
+        int ql=q[i].l, qr=q[i].r, ind=q[i].ind;
+        int bid=belong[ql];
+        if (bid!=pre) {
+            memset(cnt,0,sizeof(cnt[0])*SZ(val));
+            ans=0;
+            r=br[bid];
+            l=br[bid];
+            pre=bid;
+        }
+        while (r<qr) add(a[++r]);
+        LL pans=ans;
+        int ed=min(l,qr);
+        FOR(j,ql,ed) add(a[j]);
+        res[ind]=ans;
+        FOR(j,ql,ed) del(a[j]);
+        ans=pans;
+    }
+}
+
+int main()
+{
+
+    while (scanf("%d%d", &n,&m)==2) {
+        FOR(i,1,n) scanf("%d", &a[i]);
+        FOR(i,1,m) {
+            int l,r; scanf("%d%d", &l,&r);
+            q[i]={l,r,i};
+        }
+        prelude();
+        mt();
+        FOR(i,1,m) {
+            printf("%lld\n", res[i]);
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}

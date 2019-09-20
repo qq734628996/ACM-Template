@@ -1,0 +1,531 @@
+\section{树套树}
+
+https://blog.csdn.net/xyc1719/article/details/83614580（splay好板子）
+
+P3380 【模板】二逼平衡树（树套树）
+
+线段树套平衡树
+
+支持以下操作：
+
+1. 查询k在区间内的排名
+
+2. 查询区间内排名为k的值
+
+3. 修改某一位值上的数值
+
+4. 查询k在区间内的前驱(前驱定义为严格小于x，且最大的数，若不存在输出-2147483647)
+
+5. 查询k在区间内的后继(后继定义为严格大于x，且最小的数，若不存在输出2147483647)
+
+线段树维护区间信息，平衡树维护值域信息
+
+具体来说，线段树每个结点开一颗平衡树，这个平衡树能支持rank,kth,insert,del,pre,succ操作。
+
+操作1，写一个函数lt，求区间中小于val的数有多少个，答案即为lt+1
+
+操作2，适用操作1的lt函数进行二分，复杂度为O(logn\^3)，树状数组套主席树能搞到O(logn\^2)
+
+操作3，对包含这个位置的区间全部暴力修改，O(logn\^2)
+
+操作4,5，递归求出前驱后继，然后合并答案
+
+对 https://blog.csdn.net/xyc1719/article/details/83614580 代码简化的一些学习：线段树只涉及单点修改，不需要维护l，r信息，递归函数中带上l,r即可
+
+\begin{lstlisting}
+struct treap_node {
+    int rnd,sz,ls,rs,sum;
+} T[MAXN<<5];
+int tot;
+void init(){ srand(19981111); tot=0; }
+namespace treap {
+    #define lt T[x].ls
+    #define rt T[x].rs
+    int newnode(int val){ T[++tot]={rand(),1,0,0,val}; return tot; }
+    void up(int x){ if (x) T[x].sz=T[lt].sz+T[rt].sz+1; }
+    void split(int x, int& l, int& r, int k) {
+        if (!x) { l=r=0; return; }
+        if (k<=T[lt].sz) r=x, split(lt,l,lt,k), up(x);
+        else l=x, split(rt,rt,r,k-T[lt].sz-1), up(x);
+    }
+    void Merge(int& x, int l, int r) {
+        if (!l||!r) x=l+r;
+        else if (T[l].rnd<T[r].rnd) x=l, Merge(rt,rt,r), up(x);
+        else x=r, Merge(lt,l,lt), up(x);
+    }
+    int Rank(int x, int val) { //the number less than val
+        if (!x) return 0;
+        if (val<=T[x].sum) return Rank(lt,val);
+        return T[lt].sz+1+Rank(rt,val);
+    }
+    void Insert(int& root, int val) {
+        int x,y;
+        split(root,x,y,Rank(root,val));
+        Merge(x,x,newnode(val)); Merge(root,x,y);
+    }
+    void del(int& root, int val) {
+        int x,y,z,rnk=Rank(root,val);
+        split(root,x,y,rnk+1); split(x,x,z,rnk);
+        Merge(root,x,y);
+    }
+    int pre(int& root, int val) {
+        int x,y,z,rnk=Rank(root,val);
+        if (rnk<1) return -2147483647;
+        split(root,x,y,rnk); split(x,x,z,rnk-1);
+        int ans=T[z].sum;
+        Merge(x,x,z); Merge(root,x,y);
+        return ans;
+    }
+    int succ(int& root, int val) {
+        int x,y,z,rnk=Rank(root,val+1);
+        if (rnk>=T[root].sz) return 2147483647;
+        split(root,x,y,rnk+1); split(x,x,z,rnk);
+        int ans=T[z].sum;
+        Merge(x,x,z); Merge(root,x,y);
+        return ans;
+    }
+    void show(int x) {
+        if (x) {
+            show(lt);
+            printf("%d ", T[x].sum);
+            show(rt);
+        }
+    }
+    #undef lt
+    #undef rt
+}
+int n,q,a[MAXN];
+namespace tree {
+    #define ls x<<1
+    #define rs x<<1|1
+    struct tree_node {
+        int l,r,root;
+    } tree[MAXN<<2];
+    void build(int x, int l, int r) {
+        tree[x].l=l, tree[x].r=r;
+        tree[x].root=0;
+        FOR(i,l,r) treap::Insert(tree[x].root,a[i]);
+        if (l<r) {
+            int mid=(l+r)/2;
+            build(ls,l,mid);
+            build(rs,mid+1,r);
+        }
+    }
+    int lt(int x, int l, int r, int val) {
+        int L=tree[x].l, R=tree[x].r;
+        if (l<=L&&R<=r) return treap::Rank(tree[x].root,val);
+        else {
+            int mid=(L+R)/2;
+            int ans=0;
+            if (l<=mid) ans+=lt(ls,l,r,val);
+            if (mid<r) ans+=lt(rs,l,r,val);
+            return ans;
+        }
+    }
+    int Rank(int l, int r, int val) {
+        return lt(1,l,r,val)+1;
+    }
+    int kth(int l, int r, int k) {
+        int ll=-1, rr=1e8+9, ans;
+        while (ll<=rr) {
+            int mm=(ll+rr)/2;
+            if (lt(1,l,r,mm)>=k) ans=mm-1, rr=mm-1;
+            else ll=mm+1;
+        }
+        return ans;
+    }
+    void modify(int x, int pos, int val) {
+        treap::del(tree[x].root,a[pos]);
+        treap::Insert(tree[x].root,val);
+        int L=tree[x].l, R=tree[x].r;
+        if (L<R) {
+            int mid=(L+R)/2;
+            if (pos<=mid) modify(ls,pos,val);
+            else modify(rs,pos,val);
+        }
+    }
+    void modify(int pos, int val) {
+        modify(1,pos,val);
+        a[pos]=val;
+    }
+    int pre(int x, int l, int r, int val) {
+        int L=tree[x].l, R=tree[x].r;
+        if (l<=L&&R<=r) return treap::pre(tree[x].root,val);
+        else {
+            int mid=(L+R)/2;
+            int ans=-2147483647;
+            if (l<=mid) ans=max(ans,pre(ls,l,r,val));
+            if (mid<r) ans=max(ans,pre(rs,l,r,val));
+            return ans;
+        }
+    }
+    int pre(int l, int r, int val) { return pre(1,l,r,val); }
+    int succ(int x, int l, int r, int val) {
+        int L=tree[x].l, R=tree[x].r;
+        if (l<=L&&R<=r) return treap::succ(tree[x].root,val);
+        else {
+            int mid=(L+R)/2;
+            int ans=2147483647;
+            if (l<=mid) ans=min(ans,succ(ls,l,r,val));
+            if (mid<r) ans=min(ans,succ(rs,l,r,val));
+            return ans;
+        }
+    }
+    int succ(int l, int r, int val){ return succ(1,l,r,val); }
+    void show(int x) {
+        int L=tree[x].l, R=tree[x].r;
+        printf("[%d,%d]: ", L,R);
+        treap::show(tree[x].root); puts("");
+        if (L<R) show(ls), show(rs);
+    }
+    #undef ls
+    #undef rs
+}
+using namespace tree;
+
+int main()
+{
+
+    while (scanf("%d%d", &n,&q)==2) {
+        init();
+        FOR(i,1,n) scanf("%d", &a[i]);
+        build(1,1,n);
+        while (q--) {
+            int op,l,r,k; scanf("%d%d%d", &op,&l,&r);
+            if (op!=3) scanf("%d", &k);
+            switch (op) {
+                case 1: printf("%d\n", Rank(l,r,k)); break;
+                case 2: printf("%d\n", kth(l,r,k)); break;
+                case 3: modify(l,r); break;
+                case 4: printf("%d\n", pre(l,r,k)); break;
+                case 5: printf("%d\n", succ(l,r,k)); break;
+            }
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+bzoj1901洛谷P2617 Dynamic Rankings
+
+树状数组套主席树 模板 动态第k大
+
+支持单点修改，区间询问第k大，O(logn\^2)
+
+常数略大，需要开O2优化才能过
+
+\begin{lstlisting}
+#define mid (l+r)/2
+inline int lowbit(int x){ return x&-x; }
+int sum[MAXN<<8],L[MAXN<<8],R[MAXN<<8];
+int xx[MAXN],yy[MAXN],rt[MAXN],a[MAXN],b[MAXN<<1],ca[MAXN],cb[MAXN],cc[MAXN];
+int n,q,m,tot,totx,toty;
+void init(){ tot=totx=toty=0; }
+int ID(int x){ return lower_bound(b+1,b+1+m,x)-b; }
+int cp(int x){ sum[++tot]=sum[x]; L[tot]=L[x]; R[tot]=R[x]; return tot; }
+void update(int& x, int v, int l, int r, int p, int d) {
+    x=cp(v); sum[x]+=d;
+    if (l<r) {
+        if (p<=mid) update(L[x],L[x],l,mid,p,d);
+        else update(R[x],R[x],mid+1,r,p,d);
+    }
+}
+int query(int l, int r, int k) {
+    if (l==r) return b[l];
+    int sz=0;
+    FOR(i,1,totx) sz-=sum[L[xx[i]]];
+    FOR(i,1,toty) sz+=sum[L[yy[i]]];
+    if (k<=sz) {
+        FOR(i,1,totx) xx[i]=L[xx[i]];
+        FOR(i,1,toty) yy[i]=L[yy[i]];
+        return query(l,mid,k);
+    } else {
+        FOR(i,1,totx) xx[i]=R[xx[i]];
+        FOR(i,1,toty) yy[i]=R[yy[i]];
+        return query(mid+1,r,k-sz);
+    }
+}
+void add(int x, int y) {
+    for (int i=x; i<=n; i+=lowbit(i)) update(rt[i],rt[i],1,m,ID(a[x]),y);
+}
+
+int main()
+{
+
+    while (scanf("%d%d", &n,&q)==2) {
+        init();
+        FOR(i,1,n) scanf("%d", &a[i]), b[i]=a[i];
+        m=n;
+        FOR(i,1,q) {
+            char op[2]; scanf("%s%d%d", op,&ca[i],&cb[i]);
+            if (op[0]=='Q') scanf("%d", &cc[i]);
+            else b[++m]=cb[i], cc[i]=0;
+        }
+        sort(b+1,b+1+m);
+        m=unique(b+1,b+1+m)-b-1;
+        FOR(i,1,n) add(i,1);
+        FOR(i,1,q) {
+            if (cc[i]) {
+                totx=toty=0;
+                for (int j=ca[i]-1; j; j-=lowbit(j)) xx[++totx]=rt[j];
+                for (int j=cb[i]; j; j-=lowbit(j)) yy[++toty]=rt[j];
+                printf("%d\n", query(1,m,cc[i]));
+            } else add(ca[i],-1), a[ca[i]]=cb[i], add(ca[i],1);
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+P3157 [CQOI2011]动态逆序对
+
+支持两种操作，打印当前序列逆序对数；删掉一个数（凡是相同的全部删掉）
+
+方法一：
+
+线段树套平衡树 在线
+
+先求出总逆序对数，没删掉一个数，假设该数的位置为p，计算出区间[1,p-1]大于a[p]的数个数和区间[p+1,n]小于a[p]的数个数，更新答案，然后从序列中删掉该数。复杂度O(nlogn\^2)
+
+TLE（常数大）
+
+\begin{lstlisting}
+struct treap_node {
+    int rnd,sz,ls,rs,sum;
+} T[MAXN<<5];
+int tot;
+void init() { srand(19981111); tot=0; }
+struct treap {
+    int root;
+    void init(){ root=0; }
+    #define lt T[x].ls
+    #define rt T[x].rs
+    int newnode(int val){ T[++tot]={rand(),1,0,0,val}; return tot; }
+    void up(int x){ if (x) T[x].sz=T[lt].sz+T[rt].sz+1; }
+    void split(int x, int& l, int& r, int k) {
+        if (!x) { l=r=0; return; }
+        if (k<=T[lt].sz) r=x, split(lt,l,lt,k), up(x);
+        else l=x, split(rt,rt,r,k-T[lt].sz-1), up(x);
+    }
+    void Merge(int& x, int l, int r) {
+        if (!l||!r) x=l+r;
+        else if (T[l].rnd<T[r].rnd) x=l, Merge(rt,rt,r), up(x);
+        else x=r, Merge(lt,l,lt), up(x);
+    }
+    int LT(int x, int val) {
+        if (!x) return 0;
+        if (val<=T[x].sum) return LT(lt,val);
+        return T[lt].sz+1+LT(rt,val);
+    }
+    int GT(int x, int val) {
+        if (!x) return 0;
+        if (val>=T[x].sum) return GT(rt,val);
+        return T[rt].sz+1+GT(lt,val);
+    }
+    void Insert(int val) {
+        int x,y;
+        split(root,x,y,LT(root,val));
+        Merge(x,x,newnode(val)); Merge(root,x,y);
+    }
+    void del(int val) {
+        int x,y,z,rnk=LT(root,val);
+        split(root,x,y,rnk+1); split(x,x,z,rnk);
+        Merge(root,x,y);
+    }
+    int LT(int val) { return LT(root,val); }
+    int GT(int val) { return GT(root,val); }
+    void show(int x) {
+        if (x) {
+            show(lt);
+            printf(" %d", T[x].sum);
+            show(rt);
+        }
+    }
+    void show(){ show(root); }
+} tree[MAXN<<2];
+int n,a[MAXN];
+#define ls x<<1
+#define rs x<<1|1
+#define mid (l+r)/2
+void build(int x, int l, int r) {
+    tree[x].init();
+    FOR(i,l,r) tree[x].Insert(a[i]);
+    if (l<r) {
+        build(ls,l,mid);
+        build(rs,mid+1,r);
+    }
+}
+void del(int x, int l, int r, int p) {
+    tree[x].del(a[p]);
+    if (l<r) {
+        if (p<=mid) del(ls,l,mid,p);
+        else del(rs,mid+1,r,p);
+    }
+}
+//[p+1,n] a[i] s.t. a[i]<a[p]
+int LT(int x, int l, int r, int p) {
+    if (p<l) return tree[x].LT(a[p]);
+    int ans=LT(rs,mid+1,r,p);
+    if (p<mid) ans+=LT(ls,l,mid,p);
+    return ans;
+}
+//[1,p-1] a[i] s.t. a[i]>a[p]
+int GT(int x, int l, int r, int p) {
+    if (r<p) return tree[x].GT(a[p]);
+    int ans=GT(ls,l,mid,p);
+    if (mid+2<=p) ans+=GT(rs,mid+1,r,p);
+    return ans;
+}
+int b[MAXN];
+LL ans;
+void merge_sort(int* A, int l, int r) {
+    static int T[MAXN];
+    if (r-l>1) {
+        int m=(l+r)>>1;
+        merge_sort(A,l,m);
+        merge_sort(A,m,r);
+        int i=l, j=m, k=l;
+        while (i<m && j<r) {
+            if (A[i]<=A[j]) T[k++] = A[i++];
+            else {
+                T[k++] = A[j++];
+                ans+=m-i;
+            }
+        }
+        while (i<m) T[k++] = A[i++];
+        while (j<r) T[k++] = A[j++];
+        memcpy(A+l,T+l,sizeof(int)*(r-l));
+    }
+}
+void show(int x, int l, int r) {
+    printf("[%d,%d]:", l,r); tree[x].show(); puts("");
+    if (l<r) {
+        show(ls,l,mid);
+        show(rs,mid+1,r);
+    }
+}
+
+int main()
+{
+
+    int n,q; scanf("%d%d", &n,&q);
+    FOR(i,1,n) scanf("%d", &a[i]), b[i]=a[i];
+    ans=0;
+    merge_sort(b,1,n+1);
+    map<int,vector<int> > mp;
+    FOR(i,1,n) {
+        mp[a[i]].pb(i);
+    }
+    init();
+    build(1,1,n);
+    while (q--) {
+        int val; scanf("%d", &val);
+        printf("%lld\n", ans);
+        for (auto& p:mp[val]) {
+            if (p!=1) ans-=GT(1,1,n,p);
+            if (p!=n) ans-=LT(1,1,n,p);
+            del(1,1,n,p);
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+P3759 [TJOI2017]不勤劳的图书管理员
+
+动态逆序对 树状数组套主席树 模板
+
+给定一排书，每本书有它本应该属于的位置和页数，每次可以选择两本书交换，要求计算每次交换后的贡献，每两本逆序的书产生它们的页数和的贡献。
+
+树状数组套主席树减少空间的一个重要优化：更新的时候只有当结点为空结点时才动态开点。
+
+树状数组套主席树就是应该像树状数组套一层主席树，写法简洁了不少
+
+\begin{lstlisting}
+int n,q,a[MAXN],b[MAXN];
+inline void addmod(int& a, int b){ a=((LL)a+b+MOD)%MOD; }
+#define mid ((l+r)>>1)
+int sz[MAXN<<8],sum[MAXN<<8],L[MAXN<<8],R[MAXN<<8],tot,rt[MAXN];
+void init(){ tot=0; }
+void update(int& x, int l, int r, int p, int val, int sgn) {
+    if (!x) x=++tot; //!!!
+    sz[x]+=sgn; addmod(sum[x],sgn*val);
+    if (l<r) {
+        if (p<=mid) update(L[x],l,mid,p,val,sgn);
+        else update(R[x],mid+1,r,p,val,sgn);
+    }
+}
+void LT(int x, int l, int r, int k, int& ans, int& cnt) {
+    while (l<k) {
+        if (mid<k) {
+            addmod(ans,sum[L[x]]);
+            cnt+=sz[L[x]];
+            x=R[x];
+            l=mid+1;
+        } else {
+            x=L[x];
+            r=mid;
+        }
+    }
+}
+void GT(int x, int l, int r, int k, int& ans, int& cnt) {
+    while (k<r) {
+        if (k<=mid) {
+            addmod(ans,sum[R[x]]);
+            cnt+=sz[R[x]];
+            x=L[x];
+            r=mid;
+        } else {
+            x=R[x];
+            l=mid+1;
+        }
+    }
+}
+inline int lowbit(int x){ return x&-x; }
+void add(int p, int sgn) {
+    for (int i=p; i<=n; i+=lowbit(i)) update(rt[i],1,n,a[p],b[p],sgn);
+}
+void sol(int& ans, int p, int sgn) {
+    int res,cnt;
+    res=cnt=0;
+    for (int i=p-1; i; i-=lowbit(i)) GT(rt[i],1,n,a[p],res,cnt);
+    addmod(ans,sgn*((res+(LL)cnt*b[p])%MOD));
+    res=cnt=0;
+    for (int i=p; i; i-=lowbit(i)) LT(rt[i],1,n,a[p],res,cnt);
+    res*=-1; cnt*=-1;
+    for (int i=n; i; i-=lowbit(i)) LT(rt[i],1,n,a[p],res,cnt);
+    addmod(ans,sgn*((res+(LL)cnt*b[p])%MOD));
+    add(p,sgn);
+}
+
+int main()
+{
+
+    while (scanf("%d%d", &n,&q)==2) {
+        init();
+        int ans=0;
+        FOR(i,1,n) {
+            scanf("%d%d", &a[i],&b[i]);
+            sol(ans,i,1);
+        }
+        while (q--) {
+            int l,r; scanf("%d%d", &l,&r);
+            if (l>r) swap(l,r);
+            if (l<r) {
+                sol(ans,l,-1);
+                sol(ans,r,-1);
+                swap(a[l],a[r]);
+                swap(b[l],b[r]);
+                sol(ans,l,1);
+                sol(ans,r,1);
+            }
+            printf("%d\n", ans);
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}

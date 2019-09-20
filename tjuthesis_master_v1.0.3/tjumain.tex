@@ -1,0 +1,88 @@
+% !Mode:: "TeX:UTF-8"
+\def\usewhat{dvipdfmx}                              % 定义编译方式 dvipdfmx 或者 pdflatex ，默认为 dvipdfmx
+                                                    % 方式编译，如果需要修改，只需改变花括号中的内容即可。
+\documentclass[12pt,openany,oneside]{book}
+                                           % 如果论文超过60页 可以使用twoside 双面打印
+\input{setup/package}                      % 定义本文所使用宏包
+\graphicspath{{figures/}}                  % 定义所有的.eps文件在figures子目录下
+\begin{document}                           % 开始全文
+\begin{CJK*}{UTF8}{song}                   % 开始中文字体使用
+\input{setup/format}                       % 完成对论文各个部分格式的设置
+\frontmatter                               % 以下是论文导言部分，包括论文的封面，中英文摘要和中文目录
+\input{preface/cover}                      % 封面
+
+%%%%%%%%%%   目录   %%%%%%%%%%
+\defaultfont
+\clearpage{\pagestyle{empty}\cleardoublepage}
+\addcontentsline{toc}{chapter}{目~~~~录}
+\tableofcontents                           % 中文目录
+
+%%%%%%%%%% 正文部分内容  %%%%%%%%%%
+\mainmatter\defaultfont\sloppy\raggedbottom
+
+\chapter{准备工作}
+\input{body/header}
+\input{body/complie}
+\input{body/IO}
+\input{body/bigint}
+
+\chapter{动态规划}
+\input{body/dp}
+
+\chapter{数学}
+\input{body/number_theory}
+\input{body/game}
+\input{body/matrix}
+
+\chapter{数据结构}
+\input{body/union_find}
+\input{body/BIT}
+\input{body/RMQ}
+\input{body/seg_tree}
+\input{body/shupou}
+\input{body/fhq_treap}
+\input{body/fhq_treap_chijiu}
+\input{body/zhuxishu}
+\input{body/tree_in_tree}
+
+\chapter{图论}
+\input{body/dinic}
+\input{body/MCMF}
+\input{body/er_fen_tu}
+\input{body/spfa}
+
+\chapter{字符串}
+\input{body/KMP}
+
+\chapter{其他}
+\input{body/cdq}
+\input{body/zheng_ti_er_fen}
+\input{body/modui}
+
+
+
+
+
+
+%%%%%%%%%% 正文部分内容  %%%%%%%%%%
+
+
+
+\end{CJK*}                                        % 结束中文字体使用
+\end{document}                                    % 结束全文
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

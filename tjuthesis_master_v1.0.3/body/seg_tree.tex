@@ -1,0 +1,603 @@
+\section{线段树}
+
+单点加法 区间查询最大子段和
+
+\begin{lstlisting}
+#define ls x<<1
+#define rs x<<1|1
+#define mid (l+r)/2
+struct node {
+    LL sum,ma,lma,rma;
+    void update(LL x) {
+        sum+=x;
+        ma+=x;
+        lma+=x;
+        rma+=x;
+    }
+} T[MAXN<<2];
+void up(int x) {
+    T[x].sum=T[ls].sum+T[rs].sum;
+    T[x].ma=max(T[ls].rma+T[rs].lma,max(T[ls].ma,T[rs].ma));
+    T[x].lma=max(T[ls].lma,T[ls].sum+T[rs].lma);
+    T[x].rma=max(T[rs].rma,T[rs].sum+T[ls].rma);
+}
+void build(int x, int l, int r) {
+    if (l==r) T[x]={0,0,0,0};
+    else {
+        build(ls,l,mid);
+        build(rs,mid+1,r);
+        up(x);
+    }
+}
+void modify(int x, int l, int r, int p, LL val) {
+    if (l==r) T[x].update(val);
+    else {
+        if (p<=mid) modify(ls,l,mid,p,val);
+        else modify(rs,mid+1,r,p,val);
+        up(x);
+    }
+}
+node query(int x, int l, int r, int ql, int qr) {
+    if (ql<=l && r<=qr) return T[x];
+    if (qr<=mid) return query(ls,l,mid,ql,qr);
+    if (mid<ql) return query(rs,mid+1,r,ql,qr);
+    node ll=query(ls,l,mid,ql,qr);
+    node rr=query(rs,mid+1,r,ql,qr);
+    return {
+        ll.sum+rr.sum,
+        max(ll.rma+rr.lma,max(ll.ma,rr.ma)),
+        max(ll.lma,ll.sum+rr.lma),
+        max(rr.rma,rr.sum+ll.rma),
+    };
+}
+\end{lstlisting}
+
+单点修改 区间最值 区间求和
+
+\begin{lstlisting}
+int n,a[MAXN],val[MAXN];
+#define ls x<<1
+#define rs x<<1|1
+#define mid (l+r)/2
+struct node {
+    int sum,ma;
+} T[MAXN<<2];
+void up(int x) {
+    T[x].sum=T[ls].sum+T[rs].sum;
+    T[x].ma=max(T[ls].ma,T[rs].ma);
+}
+void build(int x, int l, int r) {
+    if (l==r) T[x]={a[l],a[l]};
+    else {
+        build(ls,l,mid);
+        build(rs,mid+1,r);
+        up(x);
+    }
+}
+void update(int x, int l, int r, int p, int val) {
+    if (l==r) T[x]={val,val};
+    else {
+        if (p<=mid) update(ls,l,mid,p,val);
+        else update(rs,mid+1,r,p,val);
+        up(x);
+    }
+}
+int query_sum(int x, int l, int r, int ql, int qr) {
+    if (ql<=l && r<=qr) return T[x].sum;
+    else {
+        int ans=0;
+        if (ql<=mid) ans+=query_sum(ls,l,mid,ql,qr);
+        if (mid<qr) ans+=query_sum(rs,mid+1,r,ql,qr);
+        return ans;
+    }
+}
+int query_max(int x, int l, int r, int ql, int qr) {
+    if (ql<=l && r<=qr) return T[x].ma;
+    else {
+        int ans=-INF;
+        if (ql<=mid) ans=max(ans,query_max(ls,l,mid,ql,qr));
+        if (mid<qr) ans=max(ans,query_max(rs,mid+1,r,ql,qr));
+        return ans;
+    }
+}
+\end{lstlisting}
+
+区间修改 区间求和
+
+\begin{lstlisting}
+int n;
+#define ls x<<1
+#define rs x<<1|1
+#define mid (l+r)/2
+struct node {
+    int l,r,sum,lazy;
+    void update(int val) {
+        sum=val*(r-l+1);
+        lazy=val;
+    }
+} T[MAXN<<2];
+void up(int x) {
+    T[x].sum=T[ls].sum+T[rs].sum;
+}
+void down(int x) {
+    if (~T[x].lazy) {
+        T[ls].update(T[x].lazy);
+        T[rs].update(T[x].lazy);
+        T[x].lazy=-1;
+    }
+}
+void build(int x, int l, int r) {
+    T[x]={l,r,0,-1};
+    if (l<r) {
+        build(ls,l,mid);
+        build(rs,mid+1,r);
+    }
+}
+void update(int x, int l, int r, int ql, int qr, int val) {
+    if (ql<=l && r<=qr) T[x].update(val);
+    else {
+        down(x);
+        if (ql<=mid) update(ls,l,mid,ql,qr,val);
+        if (mid<qr) update(rs,mid+1,r,ql,qr,val);
+        up(x);
+    }
+}
+int query_sum(int x, int l, int r, int ql, int qr) {
+    if (ql<=l && r<=qr) return T[x].sum;
+    else {
+        int ans=0;
+        down(x);
+        if (ql<=mid) ans+=query_sum(ls,l,mid,ql,qr);
+        if (mid<qr) ans+=query_sum(rs,mid+1,r,ql,qr);
+        up(x);
+        return ans;
+    }
+}
+struct edge {
+    int to,nxt;
+} e[MAXM];
+int tot,f[MAXN];
+void add(int u, int v) {
+    e[tot]={v,f[u]}; f[u]=tot++;
+}
+int sz[MAXN],fa[MAXN],d[MAXN],son[MAXN],top[MAXN],clk,in[MAXN];
+void dfs(int u) {
+    sz[u]=1; d[u]=d[fa[u]]+1; son[u]=0;
+    for (int i=f[u]; ~i; i=e[i].nxt) {
+        int v=e[i].to;
+        if (v!=fa[u]) {
+            fa[v]=u; dfs(v);
+            sz[u]+=sz[v];
+            if (sz[v]>sz[son[u]]) son[u]=v;
+        }
+    }
+}
+void dfs(int u, int tp) {
+    in[u]=++clk;
+    top[u]=tp;
+    if (son[u]) dfs(son[u],tp);
+    for (int i=f[u]; ~i; i=e[i].nxt) {
+        int v=e[i].to;
+        if (v!=fa[u] && v!=son[u]) dfs(v,v);
+    }
+}
+int install(int x) {
+    int ans=0;
+    while (x) {
+        ans+=(in[x]-in[top[x]]+1)-query_sum(1,1,n,in[top[x]],in[x]);
+        update(1,1,n,in[top[x]],in[x],1);
+        x=fa[top[x]];
+    }
+    return ans;
+}
+void init() {
+    tot=fa[1]=clk=0;
+    memset(f,-1,sizeof(f));
+}
+
+int main()
+{
+
+    while (scanf("%d", &n)==1) {
+        init();
+        FOR(i,2,n) {
+            int x; scanf("%d", &x);
+            add(x+1,i);
+        }
+        dfs(1);
+        dfs(1,1);
+        build(1,1,n);
+        int q; scanf("%d", &q);
+        while (q--) {
+            char op[11]; int x; scanf("%s%d", op,&x); x++;
+            if (op[0]=='i') printf("%d\n", install(x));
+            else {
+                printf("%d\n", query_sum(1,1,n,in[x],in[x]+sz[x]-1));
+                update(1,1,n,in[x],in[x]+sz[x]-1,0);
+            }
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+K - Transformation HDU - 4578
+
+涉及区间加、乘、定制修改，区间求和、平方和、立方和，虽是裸体但很有考验
+
+与一般线段树无异，修改和查询都是先push\_down，修改还要push\_up，区别在于懒标记优先级：最高是set，其次add和mul相等，初始值时set=add=0,mul=1。更新set时，需将add,mul设为初始值；更新mul时，需将原mul和add乘以更新值；更新add时，只需简单加上add即可。区间求平方和、立方和，把多项式展开即可得到表达式。
+
+线段树模板 1778ms
+
+\begin{lstlisting}
+#define ls x<<1
+#define rs x<<1|1
+struct node {
+    int l,r;
+    LL sum[4],lazy[4];
+    void update(int op, LL k)
+    {
+        LL tmp;
+        switch (op) {
+        case 1:
+            lazy[1] = (lazy[1]+k)%MOD;
+            sum[3] += 3*k*sum[2] + 3*k*k*sum[1] + k*k*k*(r-l+1);
+            sum[2] += 2*k*sum[1] + k*k*(r-l+1);
+            sum[1] += k*(r-l+1);
+            FOR(i,1,3) sum[i] %= MOD;
+            break;
+        case 2:
+            lazy[1] = lazy[1]*k%MOD;
+            lazy[2] = lazy[2]*k%MOD;
+            tmp = k;
+            FOR(i,1,3) sum[i] = sum[i]*tmp%MOD, tmp *= k;
+            break;
+        case 3:
+            lazy[1] = 0;
+            lazy[2] = 1;
+            lazy[3] = k;
+            tmp = k;
+            FOR(i,1,3) sum[i] = tmp*(r-l+1)%MOD, tmp *= k;
+            break;
+        }
+    }
+} tree[MAXN<<2];
+void push_up(int x)
+{
+    FOR(i,1,3) tree[x].sum[i] = (tree[ls].sum[i] + tree[rs].sum[i]) % MOD;
+}
+void push_down(int x)
+{
+    ROF(i,1,3) {
+        LL& t = tree[x].lazy[i];
+        LL tag = i==2 ? 1 : 0;
+        if (t != tag) {
+            tree[ls].update(i,t);
+            tree[rs].update(i,t);
+            t = tag;
+        }
+    }
+}
+void build(int x, int l, int r)
+{
+    tree[x].l = l, tree[x].r = r;
+    FOR(i,1,3) tree[x].sum[i] = tree[x].lazy[i] = 0;
+    tree[x].lazy[2] = 1;
+    if (l<r) {
+        int m = (l+r)>>1;
+        build(ls,l,m);
+        build(rs,m+1,r);
+    }
+}
+void update(int x, int op, int l, int r, int val)
+{
+    int L = tree[x].l, R = tree[x].r;
+    if (l <= L && R <= r) {
+        tree[x].update(op,val);
+    } else {
+        push_down(x);
+        int m = (L+R)>>1;
+        if (l<=m) update(ls,op,l,r,val);
+        if (m<r)  update(rs,op,l,r,val);
+        push_up(x);
+    }
+}
+LL query(int x, int l, int r, int p)
+{
+    int L = tree[x].l, R = tree[x].r;
+    if (l <= L && R <= r) {
+        return tree[x].sum[p];
+    } else {
+        push_down(x);
+        LL ans = 0;
+        int m = (L+R)>>1;
+        if (l<=m) ans += query(ls,l,r,p);
+        if (m<r)  ans += query(rs,l,r,p);
+        return ans % MOD;
+    }
+}
+
+int main()
+{
+
+    int n, m, op, l, r, val;
+    while (scanf("%d%d", &n, &m) == 2 && n && m) {
+        build(1,1,n);
+        while (m--) {
+            scanf("%d%d%d%d", &op,&l,&r,&val);
+            if (op != 4) update(1,op,l,r,val);
+            else printf("%I64d\n", query(1,l,r,val));
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+P - Atlantis HDU - 1542
+
+扫描线热身
+
+线段树、面积并、离散化
+
+https://blog.csdn.net/wlxsq/article/details/47254571
+
+维护一个覆盖次数cover，一个当前区间被覆盖的长度len。扫描线算法步骤：先把纵坐标离散化。从左到右扫描x坐标，每扫到矩形的左边的“竖边”加到线段树中，扫到右边的“竖边”即从线段树中删掉，每次把当前的得到的纵坐标覆盖长度乘上相邻两点横坐标之差。
+
+离散化采用vector，下标从0开始，所以采用左开右闭区间（因为线段树下标从1开始）表示线段，即线段树上一个下标i，表示区间(Y[i-1],Y[i]]这条线段。
+
+正常整数区间离散都是二元组(x1,x2-1)表示一个区间，上述表示方法则不再局限整数区间，实数区间也可以离散化表示。
+
+不是很明白无需push\_down操作，可能每次区间修改必对应两次一正一反的操作？或者查询只查询树根？如果一般线段树写法维护cover,
+
+面积并模板
+
+\begin{lstlisting}
+struct Line {
+    double x,y1,y2;
+    int sign;
+    bool operator<(const Line& o) const { return x < o.x; }
+} line[MAXN];
+vector<double> Y;
+int ID(double y) { return lower_bound(ALL(Y),y)-Y.begin(); }
+
+#define ls x<<1
+#define rs x<<1|1
+struct node {
+    int l,r,cover;
+    double len;
+} tree[MAXN<<2];
+void push_up(int x)
+{
+    int L = tree[x].l, R = tree[x].r;
+    if (tree[x].cover) tree[x].len = Y[R]-Y[L-1];
+    else if (L == R) tree[x].len = 0;
+    else tree[x].len = tree[ls].len + tree[rs].len;
+}
+void build(int x, int l, int r)
+{
+    tree[x].l = l, tree[x].r = r;
+    tree[x].cover = tree[x].len = 0;
+    if (l<r) {
+        int m = (l+r)>>1;
+        build(ls,l,m);
+        build(rs,m+1,r);
+    }
+}
+void update(int x, int l, int r, int val)
+{
+    int L = tree[x].l, R = tree[x].r;
+    if (l <= L && R <= r) {
+        tree[x].cover += val;
+    } else {
+        int m = (L+R)>>1;
+        if (l<=m) update(ls,l,r,val);
+        if (m<r)  update(rs,l,r,val);
+    }
+    push_up(x);
+}
+
+int main()
+{
+
+    int n, kase = 0;
+    double x1,x2,y1,y2;
+    while (~scanf("%d", &n) && n) {
+        Y.clear();
+        REP(i,n) {
+            scanf("%lf%lf%lf%lf", &x1,&y1,&x2,&y2);
+            line[i<<1] = (Line){x1,y1,y2,1};
+            line[i<<1|1] = (Line){x2,y1,y2,-1};
+            Y.pb(y1), Y.pb(y2);
+        }
+        n <<= 1;
+        sort(line,line+n);
+        sort(ALL(Y)); Y.erase(unique(ALL(Y)),Y.end());
+        build(1,1,SZ(Y));
+        double ans = 0;
+        REP(i,n-1) {
+            int l = ID(line[i].y1)+1, r = ID(line[i].y2);
+            update(1,l,r,line[i].sign);
+            ans += tree[1].len*(line[i+1].x-line[i].x);
+        }
+        printf("Test case #%d\nTotal explored area: %.2f\n\n", ++kase, ans);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+O - 覆盖的面积 HDU - 1255
+
+线段树、面积交、离散化
+
+https://www.cnblogs.com/lxjshuju/p/7040186.html
+
+https://blog.csdn.net/zearot/article/details/47762543
+
+与面积并的区别在于push\_up，线段树多维护里一个len表示覆盖两次以上的长度，而push\_up的更新有所变化
+
+\begin{lstlisting}
+struct Line {
+    double x,y1,y2;
+    int sign;
+    bool operator<(const Line& o) const { return x<o.x; }
+} line[MAXN];
+vector<double> Y;
+int ID(double y) { return lower_bound(ALL(Y),y)-Y.begin(); }
+
+#define ls x<<1
+#define rs x<<1|1
+struct node {
+    int l,r,cover;
+    double len[3];
+} tree[MAXN<<2];
+void push_up(int x)
+{
+    FOR(i,1,2) {
+        int j = i-tree[x].cover;
+        if (j <= 0) tree[x].len[i] = tree[x].len[0];
+        else if (tree[x].l == tree[x].r) tree[x].len[i] = 0;
+        else tree[x].len[i] = tree[ls].len[j]+tree[rs].len[j];
+    }
+}
+void build(int x, int l, int r)
+{
+    tree[x] = (node){l,r,0,Y[r]-Y[l-1],0,0};
+    if (l<r) {
+        int m = (l+r)>>1;
+        build(ls,l,m);
+        build(rs,m+1,r);
+    }
+}
+void update(int x, int l, int r, int val)
+{
+    int L = tree[x].l, R = tree[x].r;
+    if (l <= L && R <= r) {
+        tree[x].cover += val;
+    } else {
+        int m = (L+R)>>1;
+        if (l<=m) update(ls,l,r,val);
+        if (m<r)  update(rs,l,r,val);
+    }
+    push_up(x);
+}
+
+int main()
+{
+
+    double x1,x2,y1,y2;
+    int T; scanf("%d", &T);
+    while (T--) {
+        int n; scanf("%d", &n);
+        Y.clear();
+        REP(i,n) {
+            scanf("%lf%lf%lf%lf", &x1,&y1,&x2,&y2);
+            line[i<<1] = (Line){x1,y1,y2,1};
+            line[i<<1|1] = (Line){x2,y1,y2,-1};
+            Y.pb(y1), Y.pb(y2);
+        }
+        n <<= 1;
+        sort(line,line+n);
+        sort(ALL(Y)); Y.erase(unique(ALL(Y)),Y.end());
+        double ans = 0;
+        build(1,1,SZ(Y)-1);
+        REP(i,n-1) {
+            int l = ID(line[i].y1)+1, r = ID(line[i].y2);
+            update(1,l,r,line[i].sign);
+            ans += tree[1].len[2]*(line[i+1].x-line[i].x);
+        }
+        printf("%.2f\n", ans);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+N - Picture POJ - 1177
+
+求覆盖面积周长
+
+https://www.cnblogs.com/AC-King/p/7789013.html
+
+相比求面积交，多维护：lines表示区间有多少个线段，每个线段贡献两个端点，lf、rf表示区间端点是否被覆盖，这样写push\_up区间合并时：（详见代码。。）
+
+矩形并周长模板（覆盖面周长模板）
+
+\begin{lstlisting}
+struct Line {
+    int x,y1,y2,sign;
+    bool operator<(const Line& o) const { return x<o.x; }
+} line[MAXN];
+vector<int> Y;
+int ID(int y) { return lower_bound(ALL(Y),y)-Y.begin(); }
+
+#define ls x<<1
+#define rs x<<1|1
+struct node {
+    int l,r,cover,lines,len[2],lf,rf;
+} tree[MAXN<<2];
+void push_up(int x)
+{
+    if (tree[x].cover) {
+        tree[x].len[1] = tree[x].len[0];
+        tree[x].lf = tree[x].rf = tree[x].lines = 1;
+    } else {
+        tree[x].lines = tree[ls].lines + tree[rs].lines - (tree[ls].rf && tree[rs].lf);
+        tree[x].len[1] = tree[ls].len[1] + tree[rs].len[1];
+        tree[x].lf = tree[ls].lf, tree[x].rf = tree[rs].rf;
+    }
+}
+void build(int x, int l, int r)
+{
+    tree[x] = (node){l,r,0,0,Y[r]-Y[l-1],0,0,0};
+    if (l<r) {
+        int m = (l+r)>>1;
+        build(ls,l,m);
+        build(rs,m+1,r);
+    }
+}
+void update(int x, int l, int r, int val)
+{
+    int L = tree[x].l, R = tree[x].r;
+    if (l <= L && R <= r) {
+        tree[x].cover += val;
+    } else {
+        int m = (L+R)>>1;
+        if (l<=m) update(ls,l,r,val);
+        if (m<r)  update(rs,l,r,val);
+    }
+    push_up(x);
+}
+
+int main()
+{
+
+    int n,x1,x2,y1,y2;
+    while (~scanf("%d", &n)) {
+        Y.clear();
+        REP(i,n) {
+            scanf("%d%d%d%d", &x1,&y1,&x2,&y2);
+            line[i<<1] = (Line){x1,y1,y2,1};
+            line[i<<1|1] = (Line){x2,y1,y2,-1};
+            Y.pb(y1), Y.pb(y2);
+        }
+        n <<= 1;
+        sort(line, line+n);
+        sort(ALL(Y)); Y.erase(unique(ALL(Y)),Y.end());
+        LL ans = 0;
+        build(1,1,SZ(Y)-1);
+        REP(i,n-1) {
+            int l = ID(line[i].y1)+1, r = ID(line[i].y2);
+            int preL = tree[1].len[1];
+            update(1,l,r,line[i].sign);
+            ans += abs(tree[1].len[1]-preL) + tree[1].lines*2*(line[i+1].x-line[i].x);
+        }
+        ans += tree[1].len[1];
+        printf("%I64d\n", ans);
+    }
+
+    return 0;
+}
+\end{lstlisting}

@@ -1,0 +1,252 @@
+\section{可持久化平衡树}
+
+P5055 【模板】可持久化文艺平衡树
+
+模板
+
+可持久化
+
+支持：
+
+1. 在第 p 个数后插入数 xx 。
+
+2. 删除第 p 个数。
+
+3. 翻转区间 [l,r][l,r]
+
+4. 查询区间 [l,r][l,r] 中所有数的和。
+
+以上操作基于某个历史版本
+
+可持久化只需在原来fhq\_treap基础上添加：凡是涉及到修改全部newnode，并复制原来结点信息
+
+注意这里Merge操作中并没有新开结点，因为split和merge总是成对出现
+
+\begin{lstlisting}
+struct fhq_treap {
+    #define lt T[x].ls
+    #define rt T[x].rs
+    struct node {
+        int rnd,sz,ls,rs,rev;
+        LL val,sum;
+    } T[MAXN<<7];
+    int root[MAXN],tot;
+    void init() {
+        srand(19981111);
+        tot=0;
+        memset(root,0,sizeof(root));
+    }
+    int newnode(LL val){ T[++tot]={rand(),1,0,0,0,val,val}; return tot; }
+    int cp(int x) { T[++tot]=T[x]; return tot; }
+    void revone(int& x) {
+        if (x) {
+            x=cp(x);
+            T[x].rev^=1;
+            swap(lt,rt);
+        }
+    }
+    void up(int x) {
+        if (x) {
+            T[x].sz=T[lt].sz+T[rt].sz+1;
+            T[x].sum=T[lt].sum+T[rt].sum+T[x].val;
+        }
+    }
+    void down(int x) {
+        if (x) {
+            if (T[x].rev) revone(lt), revone(rt);
+            T[x].rev=0;
+        }
+    }
+    void split(int x, int& l, int& r, int k) {
+        if (!x){ l=r=0; return; }
+        down(x);
+        if (k<=T[lt].sz) r=cp(x), split(lt,l,T[r].ls,k), up(r);
+        else l=cp(x), split(rt,T[l].rs,r,k-T[lt].sz-1), up(l);
+    }
+    void Merge(int& x, int l, int r) {
+        if (!l||!r) x=l+r;
+        else if (T[l].rnd<T[r].rnd) down(x=l), Merge(rt,rt,r), up(x);
+        else down(x=r), Merge(lt,l,lt), up(x); //down(x=cp(r))
+    }
+    void Insert(int now, int v, int pos, LL val) {
+        int x,y;
+        split(root[v],x,y,pos);
+        Merge(x,x,newnode(val)); Merge(root[now],x,y);
+    }
+    void del(int now, int v, int pos) {
+        int x,y,z;
+        split(root[v],x,y,pos); split(x,x,z,pos-1);
+        Merge(root[now],x,y);
+    }
+    void Reverse(int now, int v, int l, int r) {
+        int x,y,z;
+        split(root[v],x,y,r); split(x,x,z,l-1);
+        revone(z);
+        Merge(x,x,z); Merge(root[now],x,y);
+    }
+    LL query_sum(int now, int v, int l, int r) {
+        int x,y,z;
+        split(root[v],x,y,r); split(x,x,z,l-1);
+        LL ans=T[z].sum;
+        Merge(x,x,z); Merge(root[now],x,y);
+        return ans;
+    }
+} solve;
+
+int main()
+{
+
+    int q;
+    while (scanf("%d", &q)==1) {
+        solve.init();
+        LL ans=0;
+        FOR(i,1,q) {
+            int v,op; scanf("%d%d", &v,&op);
+            LL x,y;
+            if (op==1) {
+                scanf("%lld%lld", &x,&y);
+                x^=ans, y^=ans;
+                solve.Insert(i,v,x,y);
+            } else if (op==2) {
+                scanf("%lld", &x);
+                x^=ans;
+                solve.del(i,v,x);
+            } else if (op==3) {
+                scanf("%lld%lld", &x,&y);
+                x^=ans, y^=ans;
+                solve.Reverse(i,v,x,y);
+            } else {
+                scanf("%lld%lld", &x,&y);
+                x^=ans, y^=ans;
+                ans=solve.query_sum(i,v,x,y);
+                printf("%lld\n", ans);
+            }
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+P3835 【模板】可持久化平衡树
+
+模板
+
+2.42s（O2）
+
+支持历史版本，支持：
+
+1. 插入x数
+
+2. 删除x数(若有多个相同的数，因只删除一个，如果没有请忽略该操作)
+
+3. 查询x数的排名(排名定义为比当前数小的数的个数+1。若有多个相同的数，因输出最小的排名)
+
+4. 查询排名为x的数
+
+5. 求x的前驱(前驱定义为小于x，且最大的数，如不存在输出-2147483647)
+
+6. 求x的后继(后继定义为大于x，且最小的数，如不存在输出2147483647)
+
+\begin{lstlisting}
+struct fhq_treap {
+    #define lt T[x].ls
+    #define rt T[x].rs
+    struct node {
+        int rnd,sz,ls,rs,sum;
+    } T[MAXN<<6];
+    int root[MAXN],tot;
+    void init() {
+        srand(19981111);
+        tot=0;
+    }
+    int newnode(int val){ T[++tot]={rand(),1,0,0,val}; return tot; }
+    int cp(int x){ T[++tot]=T[x]; return tot; }
+    void up(int x){ if (x) T[x].sz=T[lt].sz+T[rt].sz+1; }
+    void split(int x, int& l, int& r, int k) {
+        if (!x) { l=r=0; return; }
+        if (k<=T[lt].sz) r=cp(x), split(lt,l,T[r].ls,k), up(r);
+        else l=cp(x), split(rt,T[l].rs,r,k-T[lt].sz-1), up(l);
+    }
+    void Merge(int& x, int l, int r) {
+        if (!l||!r) x=l+r;
+        else if (T[l].rnd<T[r].rnd) x=l, Merge(rt,rt,r), up(x);
+        else x=r, Merge(lt,l,lt), up(x);
+    }
+    //the max pos of x s.t. x<val
+    int Rank(int x, int val) {
+        if (!x) return 0;
+        if (T[x].sum>=val) return Rank(lt,val);
+        return T[lt].sz+1+Rank(rt,val);
+    }
+    void Insert(int now, int v, int val) {
+        int x,y;
+        split(root[v],x,y,Rank(root[v],val));
+        Merge(x,x,newnode(val)); Merge(root[now],x,y);
+    }
+    void del(int now, int v, int val) {
+        int x,y,z,rnk=Rank(root[v],val);
+        if (rnk>=T[root[v]].sz) { root[now]=root[v]; return; }
+        split(root[v],x,y,rnk+1), split(x,x,z,rnk);
+        if (T[z].sum!=val) Merge(x,x,z);
+        Merge(root[now],x,y);
+    }
+    int kth(int now, int v, int k) {
+        int x,y,z;
+        split(root[v],x,y,k); split(x,x,z,k-1);
+        int ans=T[z].sum;
+        Merge(x,x,z); Merge(root[now],x,y);
+        return ans;
+    }
+    int query_rank(int now, int v, int val) {
+        root[now]=root[v];
+        return Rank(root[v],val)+1;
+    }
+    int pre(int now, int v, int val) {
+        int x,y,z,rnk=Rank(root[v],val);
+        if (rnk<1) {
+            root[now]=root[v];
+            return -2147483647;
+        } else {
+            split(root[v],x,y,rnk); split(x,x,z,rnk-1);
+            int ans=T[z].sum;
+            Merge(x,x,z); Merge(root[now],x,y);
+            return ans;
+        }
+    }
+    int succ(int now, int v, int val) {
+        int x,y,z,rnk=Rank(root[v],val+1);
+        if (rnk>=T[root[v]].sz) {
+            root[now]=root[v];
+            return 2147483647;
+        } else {
+            split(root[v],x,y,rnk+1), split(x,x,z,rnk);
+            int ans=T[z].sum;
+            Merge(x,x,z); Merge(root[now],x,y);
+            return ans;
+        }
+    }
+} solve;
+
+int main()
+{
+
+    int n;
+    while (scanf("%d", &n)==1) {
+        solve.init();
+        FOR(i,1,n) {
+            int v,op,val; scanf("%d%d%d", &v,&op,&val);
+            switch (op) {
+                case 1: solve.Insert(i,v,val); break;
+                case 2: solve.del(i,v,val); break;
+                case 3: printf("%d\n", solve.query_rank(i,v,val)); break;
+                case 4: printf("%d\n", solve.kth(i,v,val)); break;
+                case 5: printf("%d\n", solve.pre(i,v,val)); break;
+                case 6: printf("%d\n", solve.succ(i,v,val)); break;
+            }
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}

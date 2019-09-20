@@ -1,0 +1,468 @@
+\section{平衡树fhq\_treap}
+
+区间加法
+
+\begin{lstlisting}
+struct fhq_treap {
+    #define lt T[x].ls
+    #define rt T[x].rs
+    int root,tot,tmp;
+    struct node {
+        int rnd,sz,ls,rs;
+        LL val,sum,add;
+    } T[MAXN];
+    void build(int& x, LL val){ T[x=++tot]={rand(),1,0,0,val,val}; }
+    void addone(int x, LL val) {
+        if (x) {
+            T[x].val+=val; T[x].add+=val;
+            T[x].sum+=T[x].sz*val;
+        }
+    }
+    void init() {
+        srand(19981111);
+        root=tot=0;
+        T[0]={INF};
+    }
+    void up(int x) {
+        if (x) {
+            T[x].sz=T[lt].sz+T[rt].sz+1;
+            T[x].sum=T[lt].sum+T[rt].sum+T[x].val;
+        }
+    }
+    void down(int x) {
+        if (x) {
+            if (T[x].add) addone(lt,T[x].add), addone(rt,T[x].add);
+            T[x].add=0;
+        }
+    }
+    void Merge(int& x, int l, int r) {
+        if (!l || !r) x=l+r;
+        else if (T[l].rnd<T[r].rnd) down(x=l), Merge(rt,rt,r), up(x);
+        else down(x=r), Merge(lt,l,lt), up(x);
+    }
+    void build(int n) {
+        REP(i,n) {
+            LL x; scanf("%lld", &x);
+            build(tmp,x); Merge(root,root,tmp);
+        }
+    }
+    void split(int x, int& l, int& r, int k) {
+        if (!x) { l=r=0; return; }
+        if (k<=T[lt].sz) down(r=x), split(lt,l,lt,k), up(x);
+        else down(l=x), split(rt,rt,r,k-T[lt].sz-1), up(x);
+    }
+    void add(int l, int r, LL val) {
+        int x,y,z;
+        split(root,x,y,r); split(x,x,z,l-1);
+        addone(z,val);
+        Merge(x,x,z); Merge(root,x,y);
+    }
+    LL query(int l, int r) {
+        int x,y,z;
+        split(root,x,y,r); split(x,x,z,l-1);
+        LL ans=T[z].sum;
+        Merge(x,x,z); Merge(root,x,y);
+        return ans;
+    }
+} solve;
+\end{lstlisting}
+
+Tyvj 1728 普通平衡树 BZOJ- 3224 588ms
+
+经典：
+
+1. 插入x数
+
+2. 删除x数(若有多个相同的数，因只删除一个)
+
+3. 查询x数的排名(若有多个相同的数，因输出最小的排名)
+
+4. 查询排名为x的数
+
+5. 求x的前驱(前驱定义为小于x，且最大的数)
+
+6. 求x的后继(后继定义为大于x，且最小的数)
+
+\begin{lstlisting}
+struct fhq_treap {
+    #define lt T[x].ls
+    #define rt T[x].rs
+    int root,tot,tmp;
+    struct node {
+        int rnd,sum,sz,ls,rs;
+    } T[MAXN];
+    void init()
+    {
+        srand(19981111);
+        root = tot = 0;
+        T[0].rnd = T[0].sum = INF;
+    }
+    void build(int& x, int val) { T[x=++tot] = node{rand()<<15|rand(),val,1}; }
+    void up(int x) { if (x) T[x].sz = T[lt].sz+T[rt].sz+1; }
+    void Merge(int& x, int l, int r)
+    {
+        if (!l || !r) x = l+r;
+        else if (T[l].rnd<T[r].rnd) x=l, Merge(rt,rt,r), up(x);
+        else x=r, Merge(lt,l,lt), up(x);
+    }
+    void split(int x, int& l, int& r, int k)
+    {
+        if (!k) l=0, r=x;
+        else if (k==T[x].sz) l=x, r=0;
+        else if (k<=T[lt].sz) r=x, split(lt,l,lt,k), up(x);
+        else l=x, split(rt,rt,r,k-T[lt].sz-1), up(x);
+    }
+    int Rank(int x, int val)
+    {
+        if (!x) return 0;
+        if (T[x].sum>=val) return Rank(lt,val);
+        return T[lt].sz+1+Rank(rt,val);
+    }
+    void Insert(int val)
+    {
+        int x,y,rk = Rank(root,val);
+        split(root,x,y,rk);
+        build(tmp,val);
+        Merge(x,x,tmp); Merge(root,x,y);
+    }
+    void del(int val)
+    {
+        int x,y,z,rk = Rank(root,val);
+        split(root,x,y,rk+1); split(x,x,z,rk);
+        Merge(root,x,y);
+    }
+    int Kth(int k)
+    {
+        int x,y,z;
+        split(root,x,y,k); split(x,x,z,k-1);
+        int ans = T[z].sum;
+        Merge(x,x,z); Merge(root,x,y);
+        return ans;
+    }
+    int pre(int val)
+    {
+        int x,y,z,rk = Rank(root,val);
+        split(root,x,y,rk); split(x,x,z,rk-1);
+        int ans = T[z].sum;
+        Merge(x,x,z); Merge(root,x,y);
+        return ans;
+    }
+    int succ(int val)
+    {
+        int x,y,z,rk = Rank(root,val+1);
+        split(root,x,y,rk+1); split(x,x,z,rk);
+        int ans = T[z].sum;
+        Merge(x,x,z); Merge(root,x,y);
+        return ans;
+    }
+};
+
+fhq_treap solve;
+int n,op,x;
+
+int main()
+{
+
+    scanf("%d", &n);
+    solve.init();
+    while (n--) {
+        scanf("%d%d", &op,&x);
+        switch (op) {
+        case 1: solve.Insert(x);
+            break;
+        case 2: solve.del(x);
+            break;
+        case 3: printf("%d\n", solve.Rank(solve.root,x)+1);
+            break;
+        case 4: printf("%d\n", solve.Kth(x));
+            break;
+        case 5: printf("%d\n", solve.pre(x));
+            break;
+        case 6: printf("%d\n", solve.succ(x));
+            break;
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+SuperMemo POJ - 3580
+
+区间加、翻转、旋转，插入、删除，求最值
+
+加了push\_up、push\_down
+
+模板 891ms
+
+\begin{lstlisting}
+struct fhq_treap {
+    #define lt T[x].ls
+    #define rt T[x].rs
+    int root,tot,tmp;
+    struct node {
+        int rnd,sum,mi,sz,add,rev,ls,rs;
+    } T[MAXN];
+    void build(int& x, int val) { T[x=++tot] = node{rand()<<15|rand(),val,val,1}; }
+    void addone(int x, int val) { if (x) T[x].sum+=val, T[x].mi+=val, T[x].add+=val; }
+    void revone(int x) { T[x].rev ^= 1, swap(lt,rt); }
+    void init()
+    {
+        srand(19981111);
+        root = tot = 0;
+        T[0] = node{INF,INF,INF};
+    }
+    void up(int x)
+    {
+        if (x) {
+            T[x].mi = min(T[x].sum, min(T[lt].mi, T[rt].mi));
+            T[x].sz = T[lt].sz + T[rt].sz + 1;
+        }
+    }
+    void down(int x)
+    {
+        if (x) {
+            if (T[x].add) addone(lt,T[x].add), addone(rt,T[x].add);
+            if (T[x].rev) revone(lt), revone(rt);
+            T[x].add = T[x].rev = 0;
+        }
+    }
+    void Merge(int& x, int l, int r)
+    {
+        if (!l || !r) x=l+r;
+        else if (T[l].rnd<T[r].rnd) down(x=l), Merge(rt,rt,r), up(x);
+        else down(x=r), Merge(lt,l,lt), up(x);
+    }
+    void build(int n)
+    {
+        while (n--) {
+            int x; scanf("%d", &x);
+            build(tmp,x); Merge(root,root,tmp);
+        }
+    }
+    void split(int x, int& l, int& r, int k)
+    {
+        if (!k) l=0, r=x;
+        else if (k==T[x].sz) l=x, r=0;
+        else if (k<=T[lt].sz) down(r=x), split(lt,l,lt,k), up(x);
+        else down(l=x), split(rt,rt,r,k-T[lt].sz-1), up(x);
+    }
+    void Insert(int pos, int val)
+    {
+        int x,y;
+        split(root,x,y,pos);
+        build(tmp,val);
+        Merge(x,x,tmp), Merge(root,x,y);
+    }
+    void del(int pos)
+    {
+        int x,y,z;
+        split(root,x,z,pos), split(x,x,y,pos-1);
+        Merge(root,x,z);
+    }
+    void add(int l, int r, int val)
+    {
+        int x,y,z;
+        split(root,x,z,r), split(x,x,y,l-1);
+        addone(y,val);
+        Merge(x,x,y), Merge(root,x,z);
+    }
+    void Reverse(int l, int r)
+    {
+        int x,y,z;
+        split(root,x,z,r), split(x,x,y,l-1);
+        revone(y);
+        Merge(x,x,y), Merge(root,x,z);
+    }
+    void revole(int l, int r, int k)
+    {
+        k %= r-l+1;
+        int x,y,z,h;
+        split(root,x,h,r), split(x,x,z,r-k), split(x,x,y,l-1);
+        Merge(x,x,z), Merge(x,x,y), Merge(root,x,h);
+    }
+    int query_mi(int l, int r)
+    {
+        int x,y,z;
+        split(root,x,z,r), split(x,x,y,l-1);
+        int ans = T[y].mi;
+        Merge(x,x,y), Merge(root,x,z);
+        return ans;
+    }
+};
+
+fhq_treap solve;
+int n,m,x,y,z;
+char op[10];
+
+int main()
+{
+
+    scanf("%d", &n);
+    solve.init();
+    solve.build(n);
+    scanf("%d", &m);
+    while (m--) {
+        scanf("%s", op);
+        switch (op[0]) {
+        case 'A': scanf("%d%d%d", &x,&y,&z), solve.add(x,y,z);
+            break;
+        case 'R': scanf("%d%d", &x,&y);
+            if (op[3] == 'E') solve.Reverse(x,y);
+            else scanf("%d", &z), solve.revole(x,y,z);
+            break;
+        case 'I': scanf("%d%d", &x,&y), solve.Insert(x,y);
+            break;
+        case 'D': scanf("%d", &x), solve.del(x);
+            break;
+        case 'M': scanf("%d%d", &x,&y), printf("%d\n", solve.query_mi(x,y));
+            break;
+        }
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+递归打印全体（中序遍历）
+
+\begin{lstlisting}
+void print(int x)
+{
+	if (x) {
+		down(x);
+		print(lt);
+		printf("%d ", T[x].sum);
+		print(rt);
+	}
+}
+\end{lstlisting}
+
+treap线性构树的方法：跟笛卡尔树一样
+
+https://blog.sengxian.com/algorithms/treap
+
+Version Controlled IDE UVA - 12538
+
+线性建树、pos插入k个、pos删除k个、pos后打印k个、强制在线
+
+线性建树与笛卡尔树建树一样，用一个栈保存最右边一条链。可持久化：fhq\_treap由于不修改结点，故每次操作都新建一个结点，并把每次操作的根保存，根的编号即是版本号。此处还需要用到内存池保存结点——重载new运算符。
+
+一直RE，把rand()<<15|rand()改成rand()就好了！！！？？？
+
+100ms，优秀
+
+\begin{lstlisting}
+int tot,cntC;
+struct node *null,*pit;
+struct node {
+    int key,rnd,sz;
+    node *l,*r;
+    node(){}
+    node(int key, int rnd = rand()):key(key),rnd(rnd),sz(1){ l=r=null; }
+    void* operator new(size_t){ return pit++; }
+    void upd(){ sz = l->sz+r->sz+1; }
+} pool[4000010], *root[MAXN];
+node* newnode(node* o) { return o==null ? o : new node{*o}; }
+node* Merge(node* a, node* b)
+{
+    if (a==null) return newnode(b);
+    if (b==null) return newnode(a);
+    node* tmp;
+    if (a->rnd < b->rnd) {
+        tmp = newnode(a);
+        tmp->r = Merge(a->r,b);
+    } else {
+        tmp = newnode(b);
+        tmp->l = Merge(a,b->l);
+    }
+    tmp->upd();
+    return tmp;
+}
+typedef pair<node*, node*> droot;
+droot split(node* o, int k)
+{
+    droot d(null,null);
+    if (o==null) return d;
+    if (!k) return droot(null,newnode(o));
+    if (k==o->sz) return droot(newnode(o),null);
+    int sz = o->l->sz;
+    node* tmp = newnode(o);
+    if (k<=sz) {
+        d = split(o->l,k);
+        tmp->l = d.se;
+        tmp->upd();
+        d.se = tmp;
+    } else {
+        d = split(o->r,k-sz-1);
+        tmp->r = d.fi;
+        tmp->upd();
+        d.fi = tmp;
+    }
+    return d;
+}
+node* stk[MAXN];
+node* build(char* p)
+{
+    node* rt = new node(-INF,-INF);
+    stk[0] = rt; int sz = 1;
+    for (; *p; p++) {
+        node* now = new node(*p); int top = sz-1;
+        while (stk[top]->rnd > now->rnd) stk[top--]->upd();
+        if (top != sz-1) now->l = stk[top+1];
+        stk[top]->r = now; sz = top+1;
+        stk[sz++] = now;
+    }
+    while (sz) stk[--sz]->upd();
+    return rt->r;
+}
+void print(node* o)
+{
+    if (o==null) return;
+    print(o->l);
+    putchar(o->key);
+    if (o->key == 'c') cntC++;
+    print(o->r);
+}
+void init()
+{
+    srand(time(NULL));
+    pit = pool; null = new node();
+    null->sz = tot = cntC = 0;
+    root[0] = null;
+}
+void Insert(int pos, char* s)
+{
+    droot l = split(root[tot],pos);
+    root[++tot] = Merge(Merge(l.fi,build(s)),l.se);
+}
+void Remove(int pos, int k)
+{
+    droot l = split(root[tot],pos-1);
+    droot r = split(l.se,k);
+    root[++tot] = Merge(l.fi,r.se);
+}
+void print(int v, int pos, int k)
+{
+    droot l = split(root[v],pos-1);
+    droot r = split(l.se,k);
+    print(r.fi); puts("");
+}
+
+int main()
+{
+
+    char s[MAXN];
+    init();
+    int n; scanf("%d", &n);
+    REP(i,n) {
+        int op; scanf("%d", &op);
+        int v,p,k;
+        if (op == 1) scanf("%d%s", &p,s), Insert(p-cntC,s);
+        else if (op == 2) scanf("%d%d", &p,&k), Remove(p-cntC,k-cntC);
+        else scanf("%d%d%d", &v,&p,&k), print(v-cntC,p-cntC,k-cntC);
+    }
+
+    return 0;
+}
+\end{lstlisting}

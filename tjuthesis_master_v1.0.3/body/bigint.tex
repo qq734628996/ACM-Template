@@ -1,0 +1,207 @@
+\section{Java大数}
+
+编译参数
+
+\begin{lstlisting}[language={java}]
+> javac Main.java
+> java Main
+\end{lstlisting}
+
+Product UVA - 10106
+
+大数乘法
+
+a*b
+
+\begin{lstlisting}[language={java}]
+import java.math.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner cin=new Scanner(System.in);
+        while (cin.hasNext()) {
+            BigInteger a=cin.nextBigInteger();
+            BigInteger b=cin.nextBigInteger();
+            System.out.println(a.multiply(b));
+        }
+    }
+}
+\end{lstlisting}
+
+Integer Inquiry UVA - 424
+
+大数加法
+
+把数一直相加，直到读入0停止相加并输出结果
+
+\begin{lstlisting}[language={java}]
+import java.math.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner cin=new Scanner(System.in);
+        BigInteger ans=new BigInteger("0");
+        while (true) {
+            BigInteger x=cin.nextBigInteger();
+            if (x.equals(BigInteger.ZERO)) break;
+            ans=ans.add(x);
+        }
+        System.out.println(ans);
+    }
+}
+\end{lstlisting}
+
+N! HDU - 1042
+
+大数乘法
+
+计算阶乘
+
+\begin{lstlisting}[language={java}]
+import java.math.*;
+import java.util.*;
+
+public class Main {
+    private static final int MAXN=10009;
+    private static BigInteger[] fac=new BigInteger[MAXN];
+    public static void main(String[] args) {
+        fac[0]=BigInteger.ONE;
+        for (int i=1; i<MAXN; i++) {
+            fac[i]=fac[i-1].multiply(BigInteger.valueOf(i));
+        }
+        Scanner cin=new Scanner(System.in);
+        while (cin.hasNext()) {
+            int n=cin.nextInt();
+            System.out.println(fac[n]);
+        }
+    }
+}
+\end{lstlisting}
+
+If We Were a Child Again UVA - 10494
+
+大数除法 大数取模
+
+\begin{lstlisting}[language={java}]
+import java.math.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner cin=new Scanner(System.in);
+        while (cin.hasNext()) {
+            BigInteger a=cin.nextBigInteger();
+            String op=cin.next();
+            BigInteger b=cin.nextBigInteger();
+            if (op.equals("/")) System.out.println(a.divide(b));
+            else System.out.println(a.mod(b));
+        }
+    }
+}
+\end{lstlisting}
+
+Exponentiation POJ - 1001
+
+大数乘方
+
+去除尾部的0，以及如果是0.*的形式，以.*的形式打印
+
+\begin{lstlisting}[language={java}]
+import java.math.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner cin=new Scanner(System.in);
+        while (cin.hasNext()) {
+            BigDecimal a=cin.nextBigDecimal();
+            int b=cin.nextInt();
+            String ans=a.pow(b).stripTrailingZeros().toPlainString();
+            if (ans.startsWith("0")) ans=ans.substring(1);
+            System.out.println(ans);
+        }
+    }
+}
+\end{lstlisting}
+
+Eid LightOJ - 1024
+
+最大公倍数 大数/高精度 JAVA
+
+需要System.gc()清理内存，另外大数自带gcd
+
+\begin{lstlisting}[language={java}]
+import java.math.*;
+import java.util.*;
+
+public class Main {
+    public static void main(String[] args) {
+        Scanner cin=new Scanner(System.in);
+        int T=cin.nextInt();
+        for (int kase=1; kase<=T; kase++) {
+            int n=cin.nextInt();
+            BigInteger ans=cin.nextBigInteger();
+            for (int i=1; i<n; i++) {
+                BigInteger x=cin.nextBigInteger();
+                ans=ans.divide(ans.gcd(x)).multiply(x);
+            }
+            System.out.println("Case "+kase+": "+ans);
+            System.gc();
+        }
+    }
+}
+\end{lstlisting}
+
+Cryptography Reloaded UVALive - 4353
+
+大数开方 JAVA
+
+\begin{lstlisting}[language={java}]
+import java.math.*;
+import java.util.*;
+
+public class Main {
+    public static BigInteger sqrt(BigInteger x) {
+        BigInteger div=BigInteger.ZERO.setBit(x.bitLength()/2);
+        BigInteger div2=div;
+        while (true) {
+            BigInteger y=div.add(x.divide(div)).shiftRight(1);
+            if (y.equals(div) || y.equals(div2)) {
+                if (y.multiply(y).equals(x)) return y;
+                else return BigInteger.valueOf(-1);
+            }
+            div2=div;
+            div=y;
+        }
+    }
+    public static void main(String[] args) {
+        Scanner cin=new Scanner(System.in);
+        int kase=0;
+        while (cin.hasNext()) {
+            BigInteger n,d,e,t,b,delta,p,q;
+            n=cin.nextBigInteger();
+            d=cin.nextBigInteger();
+            e=cin.nextBigInteger();
+            if (e.equals(BigInteger.ZERO)) break;
+            d=d.multiply(e).subtract(BigInteger.ONE);
+            for (int i=1; ; i++) {
+                if (d.mod(BigInteger.valueOf(i)).signum()>0) continue;
+                t=d.divide(BigInteger.valueOf(i));
+                b=n.add(BigInteger.ONE).subtract(t);
+                delta=b.multiply(b).subtract(BigInteger.valueOf(4).multiply(n));
+                if (delta.signum()<0) continue;
+                delta=sqrt(delta);
+                if (delta.signum()<0) continue;
+                p=b.subtract(delta).divide(BigInteger.valueOf(2));
+                q=b.add(delta).divide(BigInteger.valueOf(2));
+                if (p.multiply(q).equals(n)) {
+                    System.out.println("Case #"+ ++kase+": "+p+" "+q);
+                    break;
+                }
+            }
+        }
+    }
+}
+\end{lstlisting}

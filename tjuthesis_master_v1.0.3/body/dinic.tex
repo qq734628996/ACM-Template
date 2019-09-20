@@ -1,0 +1,136 @@
+\section{最大流dinic}
+
+洛谷 P3376
+
+最大流模板 dinic
+
+\begin{lstlisting}
+struct dinic {
+    const static LL inf=0x3f3f3f3f3f3f3f3f;
+    struct edge {
+        int from,to;
+        LL cap,flow;
+    };
+    int n,m,s,t;
+    vector<edge> edges;
+    vector<int> G[MAXN];
+    bool vis[MAXN];
+    int d[MAXN],cur[MAXN];
+    void init(int n) {
+        this->n=n;
+        edges.clear();
+        FOR(i,0,n) G[i].clear();
+    }
+    void add(int from, int to, LL cap) {
+        edges.pb({from,to,cap,0});
+        edges.pb({to,from,0,0});
+        m=SZ(edges);
+        G[from].pb(m-2);
+        G[to].pb(m-1);
+    }
+    bool bfs() {
+        memset(vis,0,sizeof(vis));
+        queue<int> Q;
+        Q.push(s); d[s]=0; vis[s]=1;
+        while (!Q.empty()) {
+            int u=Q.front(); Q.pop();
+            REP(i,SZ(G[u])) {
+                edge& e=edges[G[u][i]];
+                if (!vis[e.to] && e.cap>e.flow) {
+                    vis[e.to]=1;
+                    d[e.to]=d[u]+1;
+                    Q.push(e.to);
+                }
+            }
+        }
+        return vis[t];
+    }
+    LL dfs(int u, LL a) {
+        if (u==t || !a) return a;
+        LL flow=0, f;
+        for (int& i=cur[u]; i<SZ(G[u]); i++) {
+            edge& e=edges[G[u][i]];
+            if (d[e.to]==d[u]+1 && (f=dfs(e.to,min(a,e.cap-e.flow)))>0) {
+                e.flow+=f;
+                edges[G[u][i]^1].flow-=f;
+                flow+=f;
+                a-=f;
+                if (!a) break;
+            }
+        }
+        return flow;
+    }
+    LL maxflow(int s, int t) {
+        this->s=s, this->t=t;
+        LL flow=0;
+        while (bfs()) {
+            memset(cur,0,sizeof(cur));
+            flow+=dfs(s,inf);
+        }
+        return flow;
+    }
+} solve;
+
+int main()
+{
+
+    int n,m,s,t;
+    while (scanf("%d%d%d%d", &n,&m,&s,&t)==4) {
+        solve.init(n+1);
+        REP(i,m) {
+            int x,y,z; scanf("%d%d%d", &x,&y,&z);
+            solve.add(x,y,z);
+        }
+        printf("%lld\n", solve.maxflow(s,t));
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+Reactor Cooling ZOJ - 2314
+
+无源无汇有容量下界网络的可行流
+
+新增源点s、汇点t，t到s添加一条无穷大的边，对于每条弧u->v，[b,c]，拆成3条：u->t (b), u->v (c-b), s->v (b)，有可行流当且仅当所有附加弧满载
+
+注意此题并没有考虑重边的情况
+
+\begin{lstlisting}
+int main()
+{
+
+    int T; scanf("%d", &T);
+    while (T--) {
+        int n,m; scanf("%d%d", &n,&m);
+        solve.init(n+5);
+        int s=0,t=n+1;
+        solve.add(t,s,dinic::inf);
+        map<pii,int> bbak;
+        REP(i,m) {
+            int u,v,b,c; scanf("%d%d%d%d", &u,&v,&b,&c);
+            bbak[{u,v}]=b;
+            solve.add(u,t,b);
+            solve.add(u,v,c-b);
+            solve.add(s,v,b);
+        }
+        solve.maxflow(s,t);
+        bool ok=true;
+        for (auto& e:solve.edges) {
+            if ((e.from==s || e.to==t) && e.cap>e.flow) ok=false;
+        }
+        if (!ok) puts("NO");
+        else {
+            puts("YES");
+            for (auto& e:solve.edges) {
+                if (bbak.count({e.from,e.to})) {
+                    printf("%lld\n", e.flow+bbak[{e.from,e.to}]);
+                }
+            }
+        }
+        if (T) puts("");
+    }
+
+    return 0;
+}
+\end{lstlisting}

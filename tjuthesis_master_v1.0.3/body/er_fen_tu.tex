@@ -1,0 +1,132 @@
+\section{二分图}
+
+https://www.bilibili.com/video/av16362938?from=search\&seid=1697643797530960926
+
+过山车 HDU - 2063
+
+二分图裸题 无权值无向二分图模板
+
+\begin{lstlisting}
+int to[MAXM],f[MAXN],nxt[MAXM],tot;
+void init()
+{
+    tot=0;
+    memset(f,-1,sizeof(f));
+}
+void add(int u, int v)
+{
+    to[tot]=v;
+    nxt[tot]=f[u];
+    f[u]=tot++;
+}
+int linker[MAXN],used[MAXN],uN;
+bool dfs(int u)
+{
+    for (int i=f[u]; ~i; i=nxt[i]) {
+        int v=to[i];
+        if (!used[v]) {
+            used[v]=1;
+            if (linker[v]==-1 || dfs(linker[v])) {
+                linker[v]=u;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+int hungary()
+{
+    int ans=0;
+    memset(linker,-1,sizeof(linker));
+    FOR(i,1,uN) {
+        memset(used,0,sizeof(used));
+        if (dfs(i)) ans++;
+    }
+    return ans;
+}
+
+int main()
+{
+
+    int k,m,n;
+    while (scanf("%d%d%d", &k,&m,&n)==3 && k) {
+        init();
+        uN=m;
+        REP(i,k) {
+            int x,y; scanf("%d%d", &x,&y);
+            add(x,y+m), add(y+m,x);
+        }
+        printf("%d\n", hungary());
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+奔小康赚大钱 HDU - 2255
+
+带权二分图 模板
+
+\begin{lstlisting}
+int nx,ny,g[MAXN][MAXN];
+int linker[MAXN],lx[MAXN],ly[MAXN];
+int slack[MAXN];
+bool visx[MAXN],visy[MAXN];
+bool dfs(int x)
+{
+    visx[x]=true;
+    REP(y,ny) {
+        if (visy[y]) continue;
+        int tmp=lx[x]+ly[y]-g[x][y];
+        if (!tmp) {
+            visy[y]=1;
+            if (linker[y]==-1 || dfs(linker[y])) {
+                linker[y]=x;
+                return true;
+            }
+        } else if (slack[y]>tmp) slack[y]=tmp;
+    }
+    return false;
+}
+int KM()
+{
+    memset(linker,-1,sizeof(linker));
+    memset(ly,0,sizeof(ly));
+    REP(i,nx) {
+        lx[i]=-INF;
+        REP(j,ny) lx[i]=max(lx[i],g[i][j]);
+    }
+    REP(x,nx) {
+        REP(i,ny) slack[i]=INF;
+        while (true) {
+            memset(visx,0,sizeof(visx));
+            memset(visy,0,sizeof(visy));
+            if (dfs(x)) break;
+            int d=INF;
+            REP(i,ny) if (!visy[i] && d>slack[i]) d=slack[i];
+            REP(i,nx) if (visx[i]) lx[i]-=d;
+            REP(i,ny) {
+                if (visy[i]) ly[i]+=d;
+                else slack[i]-=d;
+            }
+        }
+    }
+    int ans=0;
+    REP(i,ny) if (~linker[i]) ans+=g[linker[i]][i];
+    return ans;
+}
+
+int main()
+{
+
+    int n;
+    while (scanf("%d", &n)==1) {
+        memset(g,0,sizeof(g));
+        REP(i,n)REP(j,n) scanf("%d", &g[i][j]);
+        nx=ny=n;
+        printf("%d\n", KM());
+    }
+
+    return 0;
+}
+\end{lstlisting}

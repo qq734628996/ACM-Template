@@ -1,0 +1,411 @@
+\section{网络流MCMF}
+
+P3381 【模板】最小费用最大流
+
+\begin{lstlisting}
+template<typename Type>
+struct MCMF {
+    const static Type inf=0x3f3f3f3f3f3f3f3f;
+    struct edge {
+        int to,nxt;
+        LL cap,flow;
+        Type cost;
+    } e[MAXM];
+    int n,f[MAXN],tot,p[MAXN];
+    Type d[MAXN];
+    bool inq[MAXN];
+    void init(int n) {
+        this->n=n;
+        tot=0;
+        memset(f,-1,sizeof(f));
+    }
+    void add(int u, int v, LL cap, Type cost) {
+        e[tot]={v,f[u],cap,0,cost}; f[u]=tot++;
+        e[tot]={u,f[v],0,0,-cost}; f[v]=tot++;
+    }
+    bool spfa(int s, int t) {
+        queue<int> Q;
+        FOR(i,0,n) d[i]=inf;
+        memset(inq,0,sizeof(inq));
+        memset(p,-1,sizeof(p));
+        Q.push(s), d[s]=0, inq[s]=1;
+        while (!Q.empty()) {
+            int u=Q.front(); Q.pop();
+            inq[u]=0;
+            for (int i=f[u]; ~i; i=e[i].nxt) {
+                int v=e[i].to;
+                if (e[i].cap>e[i].flow && d[v]>d[u]+e[i].cost) {
+                    d[v]=d[u]+e[i].cost;
+                    p[v]=i;
+                    if (!inq[v]) {
+                        inq[v]=1;
+                        Q.push(v);
+                    }
+                }
+            }
+        }
+        return ~p[t];
+    }
+    LL mcmf(int s, int t, Type& cost) {
+        LL flow=0;
+        cost=0;
+        while (spfa(s,t)) {
+            LL mi=1e18;
+            for (int i=p[t]; ~i; i=p[e[i^1].to]) {
+                if (mi>e[i].cap-e[i].flow) mi=e[i].cap-e[i].flow;
+            }
+            for (int i=p[t]; ~i; i=p[e[i^1].to]) {
+                e[i].flow+=mi;
+                e[i^1].flow-=mi;
+                cost+=e[i].cost*mi;
+            }
+            flow+=mi;
+        }
+        return flow;
+    }
+};
+MCMF<LL> solve;
+
+int main()
+{
+
+    int n,m,s,t;
+    while (scanf("%d%d%d%d", &n,&m,&s,&t)==4) {
+        solve.init(n);
+        REP(i,m) {
+            int u,v,w,f; scanf("%d%d%d%d", &u,&v,&w,&f);
+            solve.add(u,v,w,f);
+        }
+        LL cost;
+        LL ans=solve.mcmf(s,t,cost);
+        printf("%lld %lld\n", ans,cost);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+dijkstra优化，优化到1/3速度
+
+\begin{lstlisting}
+template<typename Type>
+struct MCMF {
+    const static Type inf=0x3f3f3f3f3f3f3f3f;
+    struct edge {
+        int to,nxt;
+        LL cap,flow;
+        Type cost;
+    } e[MAXM];
+    int n,f[MAXN],tot,p[MAXN];
+    Type d[MAXN],H[MAXN];
+    void init(int n) {
+        this->n=n;
+        tot=0;
+        memset(f,-1,sizeof(f));
+    }
+    void add(int u, int v, LL cap, Type cost) {
+        e[tot]={v,f[u],cap,0,cost}; f[u]=tot++;
+        e[tot]={u,f[v],0,0,-cost}; f[v]=tot++;
+    }
+    bool dij(int s, int t) {
+        fill(d,d+1+n,inf);
+        fill(p,p+1+n,-1);
+        priority_queue<pll,vector<pll>,greater<pll> > pq;
+        pq.push({d[s]=0,s});
+        while (!pq.empty()) {
+            pll now=pq.top(); pq.pop();
+            int u=now.se;
+            if (d[u]<now.fi) continue;
+            for (int i=f[u]; ~i; i=e[i].nxt) {
+                int v=e[i].to;
+                if (e[i].cap>e[i].flow && d[v]>d[u]+e[i].cost+H[u]-H[v]) {
+                    d[v]=d[u]+e[i].cost+H[u]-H[v];
+                    p[v]=i;
+                    pq.push({d[v],v});
+                }
+            }
+        }
+        return ~p[t];
+    }
+    LL mcmf(int s, int t, Type& cost) {
+        memset(H,0,sizeof(H));
+        LL flow=0;
+        cost=0;
+        while (dij(s,t)) {
+            FOR(i,0,n) H[i]+=d[i];
+            LL mi=1e18;
+            for (int i=p[t]; ~i; i=p[e[i^1].to]) {
+                if (mi>e[i].cap-e[i].flow) mi=e[i].cap-e[i].flow;
+            }
+            for (int i=p[t]; ~i; i=p[e[i^1].to]) {
+                e[i].flow+=mi;
+                e[i^1].flow-=mi;
+            }
+            flow+=mi;
+            cost+=mi*H[t];
+        }
+        return flow;
+    }
+};
+MCMF<LL> solve;
+\end{lstlisting}
+
+多校赛 K Subsequence HDU - 6611
+
+卡常毒瘤
+
+可以建边上优化
+
+\begin{lstlisting}
+struct MCMF {
+    struct edge {
+        int to,rev,cap,cost;
+    };
+    int n,H[MAXN],dis[MAXN],p[MAXN],pe[MAXN];
+    vector<edge> G[MAXN];
+    void init(int n) {
+        this->n=n;
+        FOR(i,0,n) G[i].clear();
+    }
+    void add(int u, int v, int cap, int cost) {
+        G[u].pb({v,SZ(G[v]),cap,cost});
+        G[v].pb({u,SZ(G[u])-1,0,-cost});
+    }
+    int mcmf(int s, int t, int& cost) {
+        fill(H,H+1+n,0);
+        cost=0;
+        int flow=0, f=INF;
+        while (f) {
+            fill(dis,dis+1+n,INF);
+            priority_queue<pii,vector<pii>,greater<pii> > pq;
+            pq.push({dis[s]=0,s});
+            while (!pq.empty()) {
+                pii now=pq.top(); pq.pop();
+                int v=now.se;
+                if (dis[v]<now.fi) continue;
+                REP(i,SZ(G[v])) {
+                    edge& e=G[v][i];
+                    if (e.cap>0 && dis[e.to]>dis[v]+e.cost+H[v]-H[e.to]) {
+                        dis[e.to]=dis[v]+e.cost+H[v]-H[e.to];
+                        p[e.to]=v;
+                        pe[e.to]=i;
+                        pq.push({dis[e.to],e.to});
+                    }
+                }
+            }
+            if (dis[t]==INF) break;
+            FOR(i,0,n) H[i]+=dis[i];
+            int d=f;
+            for (int v=t; v!=s; v=p[v]) d=min(d,G[p[v]][pe[v]].cap);
+            f-=d; flow+=d; cost+=d*H[t];
+            for (int v=t; v!=s; v=p[v]) {
+                edge& e=G[p[v]][pe[v]];
+                e.cap-=d;
+                G[v][e.rev].cap+=d;
+            }
+        }
+        return flow;
+    }
+} solve;
+\end{lstlisting}
+
+P4001 [ICPC-Beijing 2006]狼抓兔子 / BZOJ 1001: [BeiJing2006]狼抓兔子
+
+经典 平面图最小割转对偶图最短路
+
+对于原图的每一个面，对应对偶图的一个点；对于原图的每一个边，对应对偶图的一个边，连接两个面（如果只连通一个面，那个这条边是自环）。源点和汇点连一条边，把外部面分为两块，一个面为对偶图的起点，另一个面为终点，然后建图，跑最短路即是原图的最小割即最大流
+
+详细参考2008国家集训队论文周冬《两极相通——浅析最大—最小定理在信息学竞赛中的应用》
+
+洛谷oj的数据有问题，用多组数据输入会WA
+
+\begin{lstlisting}
+int main()
+{
+
+    int m,n;
+    scanf("%d%d", &m,&n);
+    if (m==1 && n==1) { puts("0"); return 0; }
+    init();
+    int s=0, t=2*m*n+1, mn=m*n;
+    REP(i,m)REP(j,n-1) {
+        int w; scanf("%d", &w);
+        int u=i*n+j, v=mn+i*n+j;
+        if (!i) u=s;
+        if (i==m-1) v=t;
+        add(u,v,w);
+        add(v,u,w);
+    }
+    REP(i,m-1)REP(j,n) {
+        int w; scanf("%d", &w);
+        int u=mn+i*n+j-1, v=(i+1)*n+j;
+        if (!j) u=t;
+        if (j==n-1) v=s;
+        add(u,v,w);
+        add(v,u,w);
+    }
+    REP(i,m-1)REP(j,n-1) {
+        int w; scanf("%d", &w);
+        int u=mn+i*n+j, v=(i+1)*n+j;
+        add(u,v,w);
+        add(v,u,w);
+    }
+    printf("%d\n", dij(s,t));
+
+    return 0;
+}
+\end{lstlisting}
+
+最大权闭合子图
+
+https://blog.csdn.net/winter2121/article/details/80076806
+
+闭合图：给定一个有向图，对于每个结点，如果该结点的所有出边连接的结点也属于这个图，称为闭合图
+
+最大权闭合子图：给定一个有向图，每个结点有一个权重，有正有负，求最大闭合子图，使得权值和最大
+
+求解方法：新增源点s，汇点t，对于所有权值为正的结点u，连一条s到u容量为结点权值的边，对于所有权值为负的结点u，连一条u到t容量为结点权值绝对值的边，对于所有边u到v，连一条u到v容量为无穷大的边，答案为正权值之和减去最大流，可以理解为能得到的最小损失为最小割。
+
+P3410 拍照
+
+最大权闭合子图
+
+老板有n个下属，带每个下属出去要花费给定的钱，有m个人愿意给钱，如果带了他指定的下属，就会给钱，求最大利益
+
+如果带下属不需要花钱，全部带上就能得到最大利益，但是要钱，考虑损失的最少的钱，转化为最大权闭合子图，每个出钱的人是一个正权值结点，每个下属是一个负权值结点，每个出钱的人指定的下属就连一条边，这样求最小割即可，答案是正权值之和减去最小割
+
+\begin{lstlisting}
+int main()
+{
+
+    int m,n; scanf("%d%d", &m,&n);
+    int s=0, t=m+n+1;
+    solve.init(t);
+    LL sum=0;
+    FOR(i,1,m) {
+        int w; scanf("%d", &w);
+        sum+=w;
+        solve.add(s,i,w);
+        int x;
+        while (scanf("%d", &x)==1 && x) {
+            solve.add(i,m+x,solve.inf);
+        }
+    }
+    FOR(i,1,n) {
+        int w; scanf("%d", &w);
+        solve.add(m+i,t,w);
+    }
+    printf("%lld\n", sum-solve.maxflow(s,t));
+
+    return 0;
+}
+\end{lstlisting}
+
+P2774 方格取数问题
+
+经典 二分图 最大独立集=点权和-最大权匹配
+
+给一个网格，每个格点有一个数，现在要求取一些数使得所有的数两两不相邻并且它们的和尽可能地大
+
+源点连奇数点，容量为边权，偶数点连汇点，容量为边权，奇数点对于相邻的偶数点，连一条边，容量为无穷大，答案为所有点的和减去最大流
+
+\begin{lstlisting}
+int m,n;
+LL a[111][111];
+const int r[]{0,0,1,-1};
+const int c[]{1,-1,0,0};
+inline bool vld(int i, int j){ return 0<=i&&i<m&&0<=j&&j<n; }
+
+int main()
+{
+
+    while (scanf("%d%d", &m,&n)==2) {
+        LL sum=0;
+        REP(i,m)REP(j,n) scanf("%lld", &a[i][j]), sum+=a[i][j];
+        int s=m*n, t=m*n+1;
+        solve.init(t);
+        REP(i,m)REP(j,n) {
+            if ((i+j)&1) {
+                solve.add(i*n+j,t,a[i][j]);
+            } else {
+                solve.add(s,i*n+j,a[i][j]);
+                REP(k,4) {
+                    int x=i+r[k], y=j+c[k];
+                    if (vld(x,y)) {
+                        solve.add(i*n+j,x*n+y,solve.inf);
+                    }
+                }
+            }
+        }
+        printf("%lld\n", sum-solve.maxflow(s,t));
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+P1231 教辅的组成
+
+拆点
+
+有几本书，几本答案，几本练习册，书有与某些答案和练习册有一个配对关系，求最多能配对多少个三元组
+
+因为一本答案一本练习册都只能与一本书对应，所以把书拆点，结点容量为1
+
+\begin{lstlisting}
+int main()
+{
+
+    int n1,n2,n3,m;
+    while (scanf("%d%d%d", &n1,&n2,&n3)==3) {
+        int n=n1+n2+n3;
+        int s=0, t=n+n1+1;
+        solve.init(t);
+        FOR(i,1,n2) solve.add(s,n1+i,1);
+        FOR(i,1,n3) solve.add(n1+n2+i,t,1);
+        FOR(i,1,n1) solve.add(i,n+i,1);
+        scanf("%d", &m);
+        while (m--) {
+            int x,y; scanf("%d%d", &x,&y);
+            solve.add(n1+y,x,1);
+        }
+        scanf("%d", &m);
+        while (m--) {
+            int x,y; scanf("%d%d", &x,&y);
+            solve.add(n+x,n1+n2+y,1);
+        }
+        printf("%lld\n", solve.maxflow(s,t));
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+P1345 [USACO5.4]奶牛的电信Telecowmunication
+
+拆点 最小割点
+
+问最少删除多少个点，使得两个点不能连通
+
+拆点，拆成入点和出点，点容量为1，两个点有边就连一条无穷大容量的边
+
+\begin{lstlisting}
+int main()
+{
+
+    int n,m,s,t;
+    while (scanf("%d%d%d%d", &n,&m,&s,&t)==4) {
+        s+=n;
+        solve.init(2*n);
+        FOR(i,1,n) solve.add(i,i+n,1);
+        REP(i,m) {
+            int x,y; scanf("%d%d", &x,&y);
+            solve.add(x+n,y,solve.inf);
+            solve.add(y+n,x,solve.inf);
+        }
+        printf("%lld\n", solve.maxflow(s,t));
+    }
+
+    return 0;
+}
+\end{lstlisting}

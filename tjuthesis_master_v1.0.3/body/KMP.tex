@@ -1,0 +1,148 @@
+\section{KMP}
+
+P3375 【模板】KMP字符串匹配
+
+一些细节：next数组第m个元素也是有值的，方便匹配成功后继续next。此题无需优化，最简单写法即可，next数组打印从1到m而不是从0到m-1。
+
+\begin{lstlisting}
+char T[MAXN],P[MAXN];
+int nxt[MAXN],n,m;
+void getnext()
+{
+    int j = 0, k = nxt[0] = -1;
+    while (j < m) {
+        //if (k==-1 || P[j]==P[k]) j++,k++,nxt[j] = P[j]!=P[k] ? k : nxt[k];
+        if (k==-1 || P[j]==P[k]) nxt[++j] = ++k;
+        else k = nxt[k];
+    }
+}
+void KMP()
+{
+    int i = 0, j = 0;
+    while (i < n) {
+        if (j==-1 || T[i]==P[j]) i++,j++;
+        else j = nxt[j];
+        if (j==m) printf("%d\n", i-j+1);
+    }
+}
+
+int main()
+{
+
+    scanf("%s%s", T,P);
+    n = strlen(T), m = strlen(P);
+    getnext(); KMP();
+    FOR(i,1,m-1) printf("%d ", nxt[i]); printf("%d\n", nxt[m]);
+
+    return 0;
+}
+\end{lstlisting}
+
+Period UVALive - 3026
+
+训练指南第三章例题13
+
+KMPnext数组、最小循环节
+
+如果前i个字符组成一个周期串，则“错位”部分恰好是一个循环节：满足nxt[i]>0，i%(i-nxt[i])==0，周期T=i-nxt[i]，循环次数k=i/(i-nxt[i])。
+
+此处next数组定义为“最长相同前后缀”
+
+\begin{lstlisting}
+int n,nxt[MAXN],kase;
+char a[MAXN];
+void get_next(char* P)
+{
+    int j=0, k=nxt[0]=-1;
+    while (j<n) {
+        if (k==-1 || P[j]==P[k]) nxt[++j] = ++k;
+        else k = nxt[k];
+    }
+}
+
+int main()
+{
+
+    while (scanf("%d", &n)==1 && n) {
+        scanf("%s", a);
+        get_next(a);
+        printf("Test case #%d\n", ++kase);
+        FOR(i,2,n) if (nxt[i]>0 && i%(i-nxt[i])==0)
+            printf("%d %d\n", i,i/(i-nxt[i]));
+        puts("");
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+D - Cyclic Nacklace HDU - 3746
+
+最小循环节
+
+i-nxt[i]的含义是前i个元素中最小循环节的长度。
+
+\begin{lstlisting}
+int n,nxt[MAXN],kase;
+char a[MAXN];
+void get_next(char* P)
+{
+    int j=0, k=nxt[0]=-1;
+    while (j<n) {
+        if (k==-1 || P[j]==P[k]) nxt[++j] = ++k;
+        else k = nxt[k];
+    }
+}
+
+int main()
+{
+
+    int T; scanf("%d", &T);
+    while (T--) {
+        scanf("%s", a);
+        n=strlen(a), get_next(a);
+        int cir = n-nxt[n];
+        if (n%cir==0 && n/cir>1) puts("0");
+        else printf("%d\n", cir-n%cir);
+    }
+
+    return 0;
+}
+\end{lstlisting}
+
+扩展KMP模板
+
+扩展KMP解决S所有后缀子串与T的最长公共前缀长度问题。
+
+next数组含义：T[i,m-1]与T的最长相同前缀长度
+
+extend数组含义：S[i,n-1]与T的最长相同前缀长度
+
+\begin{lstlisting}
+int n,m,nxt[MAXN],ext[MAXN];
+void get_next(char* T)
+{
+    int a=0, p=0;
+    nxt[0] = m;
+    FOR(i,1,m-1) {
+        if (i>=p || i+nxt[i-a]>=p) {
+            if (i>=p) p=i;
+            while (p<m && T[p]==T[p-i]) p++;
+            nxt[i] = p-i;
+            a = i;
+        } else nxt[i] = nxt[i-a];
+    }
+}
+void extKMP(char* S, char* T)
+{
+    int a=0, p=0;
+    REP(i,n) {
+        if (i>=p || i+nxt[i-a]>=p) {
+            if (i>=p) p=i;
+            while (p<n && p-i<m && S[p]==T[p-i]) p++;
+            ext[i] = p-i;
+            a = i;
+        } else ext[i] = nxt[i-a];
+    }
+}
+\end{lstlisting}
